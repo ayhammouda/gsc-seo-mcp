@@ -102,6 +102,7 @@ export function createRuntimeService(config: AppConfig, store = new FileTokenSto
 }
 
 export async function runLocalOAuthLogin(config: AppConfig, store: TokenStore, logger: Logger): Promise<void> {
+  requireGoogleOAuthConfig(config);
   const scopes = requestedScopes(config.readonly);
   const state = randomBytes(32).toString("base64url");
   await new Promise<void>((resolve, reject) => {
