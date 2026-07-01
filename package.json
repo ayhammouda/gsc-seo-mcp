@@ -1,0 +1,48 @@
+{
+  "name": "gsc-seo-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing Google Search Console SEO data.",
+  "type": "module",
+  "bin": {
+    "gsc-seo-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "AGENTS.md",
+    "docs",
+    "server.json",
+    "glama.json",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.7.5"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
+    "prepack": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "test": "npm run build && vitest run",
+    "test:unit": "vitest run tests/*.test.ts",
+    "test:e2e": "npm run build && vitest run tests/e2e",
+    "test:live": "npm run build && vitest run tests/live",
+    "pack:dry-run": "npm pack --dry-run --json",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "googleapis": "173.0.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.1",
+    "vitest": "^4.0.8"
+  }
+}

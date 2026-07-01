@@ -1,0 +1,5 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "description": "TypeScript MCP server exposing Google Search Console sites, search analytics, sitemaps, URL inspection, and SEO opportunity tools.",
+  "maintainers": ["ayhammouda"]
+}
