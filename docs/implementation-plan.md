@@ -23,7 +23,7 @@ This repository implements `gsc-seo-mcp` as a Node.js/TypeScript MCP server. The
 - Use `googleapis@173.0.0`; package inspection confirmed `google.searchconsole({ version: "v1", auth })`, `sites.list`, `searchanalytics.query`, `sitemaps.list`, `sitemaps.submit`, and `urlInspection.index.inspect`.
 - Use `zod/v4` for all tool input and output schemas.
 - Target Node `>=22.7.5` because MCP Inspector requires it.
-- Allow MCP transports to start without OAuth credentials so clients can initialize and list tools. Live tool calls and `auth login` fail clearly until `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and stored credentials exist.
+- Allow MCP transports to start without OAuth credentials so clients can initialize and list tools. Live tool calls fail clearly until either stored credentials exist or `GSC_SEO_MCP_AUTH_MODE=adc` can resolve Google Application Default Credentials with the Search Console scope.
 
 ## Assumptions
 

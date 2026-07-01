@@ -38,6 +38,8 @@ Verify:
 
 ## Test 2: OAuth Flow
 
+Stored-token mode:
+
 ```bash
 export GOOGLE_CLIENT_ID="..."
 export GOOGLE_CLIENT_SECRET="..."
@@ -50,6 +52,19 @@ Verify:
 - [ ] Login opens a loopback OAuth flow.
 - [ ] `auth status` reports credential presence and scopes without printing tokens.
 - [ ] The default scope is `https://www.googleapis.com/auth/webmasters.readonly`.
+
+ADC mode:
+
+```bash
+gcloud auth application-default login \
+  --scopes=https://www.googleapis.com/auth/webmasters.readonly
+GSC_SEO_MCP_AUTH_MODE=adc node dist/cli.js auth status
+```
+
+Verify:
+
+- [ ] `auth status` reports Application Default Credentials mode and the readonly Search Console scope.
+- [ ] No OAuth client secret is required by the MCP server in ADC mode.
 
 ## Test 3: Read-Only Tools
 

@@ -1,6 +1,8 @@
 export const READONLY_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 export const WRITE_SCOPE = "https://www.googleapis.com/auth/webmasters";
 
+export type AuthMode = "stored" | "adc";
+
 export interface HttpConfig {
   host: string;
   port: number;
@@ -8,6 +10,7 @@ export interface HttpConfig {
 }
 
 export interface AppConfig {
+  authMode: AuthMode;
   googleClientId?: string;
   googleClientSecret?: string;
   tokenStorePath: string;
@@ -109,4 +112,3 @@ export class UserFacingError extends Error {
     this.name = "UserFacingError";
   }
 }
-

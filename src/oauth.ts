@@ -50,6 +50,14 @@ export function validateOAuthCallback(url: URL, expectedState: string): string {
 export function createRuntimeService(config: AppConfig, store = new FileTokenStore(config.tokenStorePath), logger?: Logger): RuntimeService {
   let client: GoogleSearchConsoleClient | undefined;
 
+  function createAdcClient(): GoogleSearchConsoleClient {
+    const auth = new google.auth.GoogleAuth({ scopes: requestedScopes(config.readonly) });
+    return new GoogleSearchConsoleClient(
+      google.searchconsole({ version: "v1", auth }) as unknown as RawSearchConsoleClient,
+      { timeoutMs: config.requestTimeoutMs }
+    );
+  }
+
   async function loadStoredCredentials(): Promise<StoredCredentials> {
     const stored = await store.load();
     if (!stored) {
@@ -60,6 +68,10 @@ export function createRuntimeService(config: AppConfig, store = new FileTokenSto
 
   async function getClient(): Promise<GoogleSearchConsoleClient> {
     if (client) return client;
+    if (config.authMode === "adc") {
+      client = createAdcClient();
+      return client;
+    }
     const stored = await loadStoredCredentials();
     const oauth = createOAuthClient(config);
     const sanitizedTokens = Object.fromEntries(
@@ -88,6 +100,9 @@ export function createRuntimeService(config: AppConfig, store = new FileTokenSto
 
   return {
     hasWriteScope: async () => {
+      if (config.authMode === "adc") {
+        return !config.readonly;
+      }
       const stored = await store.load();
       return Boolean(stored?.scopes.includes(WRITE_SCOPE));
     },
@@ -102,6 +117,11 @@ export function createRuntimeService(config: AppConfig, store = new FileTokenSto
 }
 
 export async function runLocalOAuthLogin(config: AppConfig, store: TokenStore, logger: Logger): Promise<void> {
+  if (config.authMode === "adc") {
+    throw new Error(
+      "auth login is not used when GSC_SEO_MCP_AUTH_MODE=adc. Run gcloud auth application-default login with the Search Console scope instead."
+    );
+  }
   requireGoogleOAuthConfig(config);
   const scopes = requestedScopes(config.readonly);
   const state = randomBytes(32).toString("base64url");

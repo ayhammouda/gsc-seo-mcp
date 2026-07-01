@@ -1,8 +1,9 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { AppConfig } from "./types.js";
+import type { AppConfig, AuthMode } from "./types.js";
 
 export interface ConfigFlags {
+  authMode?: AuthMode;
   readonly?: boolean;
   host?: string;
   port?: number;
@@ -28,6 +29,12 @@ function parseBoolean(name: string, value: string | undefined): boolean | undefi
   if (value === "true") return true;
   if (value === "false") return false;
   throw new Error(`${name} must be "true" or "false"`);
+}
+
+function parseAuthMode(name: string, value: string | undefined): AuthMode | undefined {
+  if (value === undefined) return undefined;
+  if (value === "stored" || value === "adc") return value;
+  throw new Error(`${name} must be "stored" or "adc"`);
 }
 
 function parsePort(name: string, value: string | undefined): number | undefined {
@@ -58,12 +65,14 @@ function validateLocalHttpHost(name: string, value: string): string {
 }
 
 export function resolveConfig({ env, flags }: ResolveConfigInput): AppConfig {
+  const envAuthMode = parseAuthMode("GSC_SEO_MCP_AUTH_MODE", env.GSC_SEO_MCP_AUTH_MODE);
   const envReadonly = parseBoolean("GSC_SEO_MCP_READONLY", env.GSC_SEO_MCP_READONLY);
   const envPort = parsePort("GSC_SEO_MCP_HTTP_PORT", env.GSC_SEO_MCP_HTTP_PORT);
   const path = flags.path ?? optionalString(env.GSC_SEO_MCP_HTTP_PATH) ?? "/mcp";
   const host = flags.host ?? optionalString(env.GSC_SEO_MCP_HTTP_HOST) ?? "127.0.0.1";
   const port = flags.port !== undefined ? validatePort("GSC_SEO_MCP_HTTP_PORT", flags.port) : (envPort ?? 8787);
   const config: AppConfig = {
+    authMode: flags.authMode ?? envAuthMode ?? "stored",
     tokenStorePath:
       flags.tokenStorePath ?? optionalString(env.GSC_SEO_MCP_TOKEN_STORE_PATH) ?? DEFAULT_TOKEN_STORE_PATH,
     readonly: flags.readonly ?? envReadonly ?? true,

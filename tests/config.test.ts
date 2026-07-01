@@ -6,9 +6,16 @@ describe("resolveConfig", () => {
     const config = resolveConfig({ env: {}, flags: {} });
 
     expect(config.readonly).toBe(true);
+    expect(config.authMode).toBe("stored");
     expect(config.http.host).toBe("127.0.0.1");
     expect(config.http.port).toBe(8787);
     expect(config.http.path).toBe("/mcp");
+  });
+
+  it("supports explicit Application Default Credentials auth mode", () => {
+    expect(resolveConfig({ env: { GSC_SEO_MCP_AUTH_MODE: "adc" }, flags: {} }).authMode).toBe("adc");
+    expect(resolveConfig({ env: { GSC_SEO_MCP_AUTH_MODE: "stored" }, flags: { authMode: "adc" } }).authMode).toBe("adc");
+    expect(() => resolveConfig({ env: { GSC_SEO_MCP_AUTH_MODE: "magic" }, flags: {} })).toThrow(/GSC_SEO_MCP_AUTH_MODE/);
   });
 
   it("lets flags override environment variables", () => {

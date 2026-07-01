@@ -28,6 +28,13 @@ npm run build
 
 ## Authentication
 
+Two authentication modes are supported:
+
+- `stored` (default): `gsc-seo-mcp auth login` manages a local token store using your OAuth client ID and secret.
+- `adc`: use Google Application Default Credentials, such as credentials created by `gcloud auth application-default login`.
+
+### Stored OAuth Tokens
+
 Create OAuth credentials in Google Cloud, enable the Search Console API, then set:
 
 ```bash
@@ -45,6 +52,25 @@ Check credential presence without printing secrets:
 
 ```bash
 gsc-seo-mcp auth status
+```
+
+### Application Default Credentials
+
+ADC mode avoids `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` at server launch time:
+
+```bash
+gcloud auth application-default login \
+  --scopes=https://www.googleapis.com/auth/webmasters.readonly
+
+GSC_SEO_MCP_AUTH_MODE=adc gsc-seo-mcp stdio
+```
+
+If `gcloud` requires a custom OAuth client for non-Cloud scopes, create a Desktop OAuth client in Google Cloud and pass its downloaded JSON:
+
+```bash
+gcloud auth application-default login \
+  --client-id-file=/path/to/client_secret.json \
+  --scopes=https://www.googleapis.com/auth/webmasters.readonly
 ```
 
 By default, the server requests only:
@@ -99,8 +125,9 @@ Flags override environment variables.
 
 | Env | Purpose | Default |
 | --- | --- | --- |
-| `GOOGLE_CLIENT_ID` | OAuth client ID | required for login/live API calls |
-| `GOOGLE_CLIENT_SECRET` | OAuth client secret | required for login/live API calls |
+| `GSC_SEO_MCP_AUTH_MODE` | `stored` token-store auth or `adc` Application Default Credentials | `stored` |
+| `GOOGLE_CLIENT_ID` | OAuth client ID | required for `stored` auth login/live API calls |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret | required for `stored` auth login/live API calls |
 | `GSC_SEO_MCP_TOKEN_STORE_PATH` | Local credential store path | `~/.gsc-seo-mcp/tokens.json` |
 | `GSC_SEO_MCP_READONLY` | Disable write tools when `true` | `true` |
 | `GSC_SEO_MCP_HTTP_HOST` | HTTP bind host | `127.0.0.1` |

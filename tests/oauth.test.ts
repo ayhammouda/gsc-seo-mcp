@@ -24,6 +24,7 @@ describe("validateOAuthCallback", () => {
 describe("runLocalOAuthLogin", () => {
   it("rejects before opening the callback server when OAuth client config is missing", async () => {
     const config: AppConfig = {
+      authMode: "stored",
       tokenStorePath: "/tmp/gsc-seo-mcp-test-tokens.json",
       readonly: true,
       http: { host: "127.0.0.1", port: 8787, path: "/mcp" },
@@ -37,5 +38,21 @@ describe("runLocalOAuthLogin", () => {
     await expect(runLocalOAuthLogin(config, store, createMemoryLogger())).rejects.toThrow(
       /GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/
     );
+  });
+
+  it("does not run local OAuth login in ADC mode", async () => {
+    const config: AppConfig = {
+      authMode: "adc",
+      tokenStorePath: "/tmp/gsc-seo-mcp-test-tokens.json",
+      readonly: true,
+      http: { host: "127.0.0.1", port: 8787, path: "/mcp" },
+      requestTimeoutMs: 30_000
+    };
+    const store: TokenStore = {
+      load: () => Promise.resolve(null),
+      save: () => Promise.resolve()
+    };
+
+    await expect(runLocalOAuthLogin(config, store, createMemoryLogger())).rejects.toThrow(/application-default login/);
   });
 });
