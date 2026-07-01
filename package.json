@@ -24,7 +24,7 @@
     "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
     "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "npm run build && vitest run",
     "test:unit": "vitest run tests/*.test.ts",
     "test:e2e": "npm run build && vitest run tests/e2e",
