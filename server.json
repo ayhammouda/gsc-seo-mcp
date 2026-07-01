@@ -1,0 +1,49 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ayhammouda/gsc-seo-mcp",
+  "description": "MCP server exposing Google Search Console SEO data over stdio.",
+  "title": "GSC SEO MCP",
+  "websiteUrl": "https://github.com/ayhammouda/gsc-seo-mcp",
+  "repository": {
+    "url": "https://github.com/ayhammouda/gsc-seo-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "gsc-seo-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "GOOGLE_CLIENT_ID",
+          "description": "Google OAuth client ID for Search Console API access.",
+          "isRequired": true,
+          "isSecret": false
+        },
+        {
+          "name": "GOOGLE_CLIENT_SECRET",
+          "description": "Google OAuth client secret for Search Console API access.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "GSC_SEO_MCP_READONLY",
+          "description": "Set to false only when enabling sitemap submission.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "GSC_SEO_MCP_TOKEN_STORE_PATH",
+          "description": "Optional local token store path.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

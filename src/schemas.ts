@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import type { DecliningPage, InspectUrlOutput, KeywordOpportunity } from "./types.js";
 
 export const dimensionSchema = z.enum(["query", "page", "country", "device", "date", "searchAppearance"]);
 export const filterOperatorSchema = z.enum([
@@ -23,6 +24,8 @@ const siteUrlSchema = z
   });
 
 const uniqueDimensions = (dimensions: string[]) => new Set(dimensions).size === dimensions.length;
+
+export const emptyInputSchema = z.object({});
 
 export const dimensionFilterSchema = z.object({
   dimension: dimensionSchema.exclude(["date"]),
@@ -109,8 +112,115 @@ export const findKeywordOpportunitiesInputSchema = z.object({
   limit: z.int().min(1).max(100).default(25)
 });
 
+export const searchRowSchema = z.object({
+  keys: z.array(z.string()),
+  clicks: z.number(),
+  impressions: z.number(),
+  ctr: z.number(),
+  position: z.number()
+});
+
+export const listSitesOutputSchema = z.object({
+  sites: z.array(
+    z.object({
+      siteUrl: z.string(),
+      permissionLevel: z.string().optional()
+    })
+  )
+});
+
+export const searchAnalyticsOutputSchema = z.object({
+  rows: z.array(searchRowSchema),
+  note: z.string()
+});
+
+export const listSitemapsOutputSchema = z.object({
+  sitemaps: z.array(
+    z.object({
+      path: z.string(),
+      lastSubmitted: z.string().optional(),
+      lastDownloaded: z.string().optional(),
+      warnings: z.number().optional(),
+      errors: z.number().optional(),
+      isPending: z.boolean().optional(),
+      isSitemapsIndex: z.boolean().optional(),
+      type: z.string().optional(),
+      contents: z
+        .array(
+          z.object({
+            type: z.string().optional(),
+            submitted: z.number().optional(),
+            indexed: z.number().optional()
+          })
+        )
+        .optional()
+    })
+  )
+});
+
+export const submitSitemapOutputSchema = z.object({
+  submitted: z.boolean(),
+  siteUrl: z.string(),
+  sitemapUrl: z.string()
+});
+
+export const inspectUrlOutputSchema: z.ZodType<InspectUrlOutput> = z.object({
+  inspectionResultLink: z.string().optional(),
+  indexStatus: z.object({
+    verdict: z.string().optional(),
+    coverageState: z.string().optional(),
+    robotsTxtState: z.string().optional(),
+    indexingState: z.string().optional(),
+    pageFetchState: z.string().optional(),
+    googleCanonical: z.string().optional(),
+    userCanonical: z.string().optional(),
+    lastCrawlTime: z.string().optional(),
+    crawledAs: z.string().optional(),
+    sitemap: z.array(z.string()).optional(),
+    referringUrls: z.array(z.string()).optional()
+  }),
+  mobileUsability: z.unknown().optional(),
+  richResults: z.unknown().optional(),
+  amp: z.unknown().optional()
+});
+
+export const decliningPageSchema: z.ZodType<DecliningPage> = z.object({
+  page: z.string(),
+  current: searchRowSchema,
+  previous: searchRowSchema,
+  deltas: z.object({
+    clicks: z.number(),
+    impressions: z.number(),
+    ctr: z.number(),
+    position: z.number()
+  }),
+  explanation: z.string()
+});
+
+export const keywordOpportunitySchema: z.ZodType<KeywordOpportunity> = z.object({
+  query: z.string(),
+  page: z.string().optional(),
+  impressions: z.number(),
+  clicks: z.number(),
+  ctr: z.number(),
+  position: z.number(),
+  opportunityReason: z.string()
+});
+
+export const decliningPagesOutputSchema = z.object({ pages: z.array(decliningPageSchema) });
+export const keywordOpportunitiesOutputSchema = z.object({ opportunities: z.array(keywordOpportunitySchema) });
+
+export const toolSchemaContracts = {
+  gsc_list_sites: { input: emptyInputSchema, output: listSitesOutputSchema },
+  gsc_search_analytics: { input: searchAnalyticsInputSchema, output: searchAnalyticsOutputSchema },
+  gsc_list_sitemaps: { input: listSitemapsInputSchema, output: listSitemapsOutputSchema },
+  gsc_submit_sitemap: { input: submitSitemapInputSchema, output: submitSitemapOutputSchema },
+  gsc_inspect_url: { input: inspectUrlInputSchema, output: inspectUrlOutputSchema },
+  gsc_find_declining_pages: { input: findDecliningPagesInputSchema, output: decliningPagesOutputSchema },
+  gsc_find_keyword_opportunities: { input: findKeywordOpportunitiesInputSchema, output: keywordOpportunitiesOutputSchema }
+} as const;
+
 export type SearchAnalyticsInput = z.infer<typeof searchAnalyticsInputSchema>;
 export type InspectUrlInput = z.infer<typeof inspectUrlInputSchema>;
 export type FindDecliningPagesInput = z.infer<typeof findDecliningPagesInputSchema>;
 export type FindKeywordOpportunitiesInput = z.infer<typeof findKeywordOpportunitiesInputSchema>;
-

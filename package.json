@@ -11,6 +11,10 @@
     "README.md",
     "AGENTS.md",
     "docs",
+    "server.json",
+    "glama.json",
+    "SECURITY.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {
@@ -21,7 +25,11 @@
     "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "npm run build && vitest run",
+    "test:unit": "vitest run tests/*.test.ts",
+    "test:e2e": "npm run build && vitest run tests/e2e",
+    "test:live": "npm run build && vitest run tests/live",
+    "pack:dry-run": "npm pack --dry-run --json",
     "test:watch": "vitest"
   },
   "dependencies": {

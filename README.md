@@ -1,5 +1,10 @@
 # gsc-seo-mcp
 
+[![CI](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/ci.yml)
+[![Security Audit](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/security.yml/badge.svg)](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/security.yml)
+[![CodeQL](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/codeql.yml/badge.svg)](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 `gsc-seo-mcp` is a TypeScript MCP server that exposes Google Search Console SEO data through local stdio and Streamable HTTP transports.
 
 ## Install
@@ -8,10 +13,16 @@
 npm install -g gsc-seo-mcp
 ```
 
+Run without installing:
+
+```bash
+npx gsc-seo-mcp --version
+```
+
 For local development:
 
 ```bash
-npm install
+npm ci
 npm run build
 ```
 
@@ -56,6 +67,24 @@ stdio:
 gsc-seo-mcp stdio
 ```
 
+MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "gsc-seo": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "gsc-seo-mcp"],
+      "env": {
+        "GOOGLE_CLIENT_ID": "...",
+        "GOOGLE_CLIENT_SECRET": "..."
+      }
+    }
+  }
+}
+```
+
 Streamable HTTP:
 
 ```bash
@@ -96,10 +125,26 @@ Flags override environment variables.
 npm run typecheck
 npm run lint
 npm test
+npm run test:e2e
 npm run build
+npm run pack:dry-run
 ```
 
 Tests mock Google and network calls.
+
+Quality and release docs:
+
+- [Contributing](CONTRIBUTING.md)
+- [Test strategy](.github/TEST-STRATEGY.md)
+- [Manual MCP QA](.github/INTEGRATION-TEST.md)
+- [Release process](.github/RELEASE.md)
+- [Security policy](SECURITY.md)
+
+## Registry Metadata
+
+- `server.json` contains MCP Registry package metadata for npm distribution.
+- `glama.json` contains Glama listing metadata.
+- Version-bearing files are guarded by package tests and the release workflow.
 
 ## Security Notes
 
@@ -107,3 +152,4 @@ Tests mock Google and network calls.
 - Access tokens, refresh tokens, authorization codes, and client secrets are redacted from logs.
 - The local file token store uses restrictive permissions (`0700` for app-created directories, `0600` for token files).
 - The token store is not encrypted yet; see the `TODO(prod)` marker in `src/auth/token-store.ts`.
+- HTTP mode is loopback-only until remote HTTP authentication is implemented.

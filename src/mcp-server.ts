@@ -1,22 +1,28 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import * as z from "zod/v4";
 import { computeDecliningPages, computeKeywordOpportunities } from "./insights.js";
 import {
+  decliningPagesOutputSchema,
+  emptyInputSchema,
   findDecliningPagesInputSchema,
   findKeywordOpportunitiesInputSchema,
   inspectUrlInputSchema,
+  inspectUrlOutputSchema,
+  keywordOpportunitiesOutputSchema,
+  listSitemapsOutputSchema,
   listSitemapsInputSchema,
+  listSitesOutputSchema,
+  searchAnalyticsOutputSchema,
   searchAnalyticsInputSchema,
+  submitSitemapOutputSchema,
   submitSitemapInputSchema
 } from "./schemas.js";
-import type {
-  DecliningPage,
-  GscService,
-  InspectUrlOutput,
-  KeywordOpportunity
-} from "./types.js";
+import { redactSecrets } from "./security.js";
+import type { GscService } from "./types.js";
 import { UserFacingError, WRITE_SCOPE } from "./types.js";
+
+export const GSC_SERVER_NAME = "gsc-seo-mcp";
+export const GSC_SERVER_VERSION = "0.1.0";
 
 export const GSC_TOOL_NAMES = [
   "gsc_list_sites",
@@ -41,113 +47,44 @@ export interface ToolHandlerDeps {
 
 export type GscServerDeps = ToolHandlerDeps;
 
-const searchRowSchema = z.object({
-  keys: z.array(z.string()),
-  clicks: z.number(),
-  impressions: z.number(),
-  ctr: z.number(),
-  position: z.number()
-});
+function countSummary(count: number, singular: string, plural = `${singular}s`): string {
+  return `Returned ${count} ${count === 1 ? singular : plural}.`;
+}
 
-const listSitesOutputSchema = z.object({
-  sites: z.array(
-    z.object({
-      siteUrl: z.string(),
-      permissionLevel: z.string().optional()
-    })
-  )
-});
-
-const searchAnalyticsOutputSchema = z.object({
-  rows: z.array(searchRowSchema),
-  note: z.string()
-});
-
-const listSitemapsOutputSchema = z.object({
-  sitemaps: z.array(
-    z.object({
-      path: z.string(),
-      lastSubmitted: z.string().optional(),
-      lastDownloaded: z.string().optional(),
-      warnings: z.number().optional(),
-      errors: z.number().optional(),
-      isPending: z.boolean().optional(),
-      isSitemapsIndex: z.boolean().optional(),
-      type: z.string().optional(),
-      contents: z
-        .array(
-          z.object({
-            type: z.string().optional(),
-            submitted: z.number().optional(),
-            indexed: z.number().optional()
-          })
-        )
-        .optional()
-    })
-  )
-});
-
-const submitSitemapOutputSchema = z.object({
-  submitted: z.boolean(),
-  siteUrl: z.string(),
-  sitemapUrl: z.string()
-});
-
-const inspectUrlOutputSchema: z.ZodType<InspectUrlOutput> = z.object({
-  inspectionResultLink: z.string().optional(),
-  indexStatus: z.object({
-    verdict: z.string().optional(),
-    coverageState: z.string().optional(),
-    robotsTxtState: z.string().optional(),
-    indexingState: z.string().optional(),
-    pageFetchState: z.string().optional(),
-    googleCanonical: z.string().optional(),
-    userCanonical: z.string().optional(),
-    lastCrawlTime: z.string().optional(),
-    crawledAs: z.string().optional(),
-    sitemap: z.array(z.string()).optional(),
-    referringUrls: z.array(z.string()).optional()
-  }),
-  mobileUsability: z.unknown().optional(),
-  richResults: z.unknown().optional(),
-  amp: z.unknown().optional()
-});
-
-const decliningPageSchema: z.ZodType<DecliningPage> = z.object({
-  page: z.string(),
-  current: searchRowSchema,
-  previous: searchRowSchema,
-  deltas: z.object({
-    clicks: z.number(),
-    impressions: z.number(),
-    ctr: z.number(),
-    position: z.number()
-  }),
-  explanation: z.string()
-});
-
-const keywordOpportunitySchema: z.ZodType<KeywordOpportunity> = z.object({
-  query: z.string(),
-  page: z.string().optional(),
-  impressions: z.number(),
-  clicks: z.number(),
-  ctr: z.number(),
-  position: z.number(),
-  opportunityReason: z.string()
-});
-
-const decliningPagesOutputSchema = z.object({ pages: z.array(decliningPageSchema) });
-const keywordOpportunitiesOutputSchema = z.object({ opportunities: z.array(keywordOpportunitySchema) });
+function summarizeStructuredContent(structuredContent: Record<string, unknown>): string {
+  if (Array.isArray(structuredContent.sites)) {
+    return countSummary(structuredContent.sites.length, "Search Console site");
+  }
+  if (Array.isArray(structuredContent.rows)) {
+    return countSummary(structuredContent.rows.length, "search analytics row");
+  }
+  if (Array.isArray(structuredContent.sitemaps)) {
+    return countSummary(structuredContent.sitemaps.length, "sitemap");
+  }
+  if (structuredContent.submitted === true) {
+    return "Sitemap submitted.";
+  }
+  if ("indexStatus" in structuredContent) {
+    return "URL inspection completed.";
+  }
+  if (Array.isArray(structuredContent.pages)) {
+    return countSummary(structuredContent.pages.length, "declining page");
+  }
+  if (Array.isArray(structuredContent.opportunities)) {
+    return countSummary(structuredContent.opportunities.length, "keyword opportunity", "keyword opportunities");
+  }
+  return "Returned structured result.";
+}
 
 function success(structuredContent: Record<string, unknown>): CallToolResult {
   return {
-    content: [{ type: "text", text: JSON.stringify(structuredContent) }],
+    content: [{ type: "text", text: summarizeStructuredContent(structuredContent) }],
     structuredContent
   };
 }
 
 function toolError(error: unknown): CallToolResult {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = redactSecrets(error instanceof Error ? error.message : String(error));
   return {
     content: [{ type: "text", text: message }],
     isError: true
@@ -268,7 +205,7 @@ export function createToolHandlers(deps: ToolHandlerDeps) {
 }
 
 export function createGscMcpServer(deps: GscServerDeps): McpServer {
-  const server = new McpServer({ name: "gsc-seo-mcp", version: "0.1.0" });
+  const server = new McpServer({ name: GSC_SERVER_NAME, version: GSC_SERVER_VERSION });
   const handlers = createToolHandlers(deps);
 
   server.registerTool(
@@ -276,7 +213,7 @@ export function createGscMcpServer(deps: GscServerDeps): McpServer {
     {
       title: "List Search Console Sites",
       description: "List Search Console properties for the authenticated account.",
-      inputSchema: z.object({}),
+      inputSchema: emptyInputSchema,
       outputSchema: listSitesOutputSchema,
       annotations: { readOnlyHint: true, openWorldHint: true }
     },

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { FileTokenStore, getAuthStatus } from "./auth/token-store.js";
 import { resolveConfig, type ConfigFlags } from "./config.js";
+import { GSC_SERVER_VERSION } from "./mcp-server.js";
 import { createRuntimeService, runLocalOAuthLogin } from "./oauth.js";
 import { createStderrLogger, redactSecrets } from "./security.js";
 import { serveHttp, serveStdio } from "./transport.js";
@@ -20,6 +21,7 @@ Options:
   --path <path>       HTTP MCP path, defaults to GSC_SEO_MCP_HTTP_PATH or /mcp
   --readonly <bool>   Defaults to GSC_SEO_MCP_READONLY or true
   --token-store <p>   Defaults to GSC_SEO_MCP_TOKEN_STORE_PATH
+  --version           Show version
   --help              Show this help
 `);
 }
@@ -69,6 +71,10 @@ async function main(argv: string[]): Promise<void> {
   const [command, subcommand, ...rest] = argv;
   if (!command || command === "--help" || command === "-h") {
     printHelp();
+    return;
+  }
+  if (command === "--version" || command === "-v") {
+    process.stdout.write(`gsc-seo-mcp ${GSC_SERVER_VERSION}\n`);
     return;
   }
 
