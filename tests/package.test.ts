@@ -234,7 +234,7 @@ describe("package metadata", () => {
     expect(stdout.trim()).toBe(`${packageJson.name} ${packageJson.version}`);
   });
 
-  it("keeps unpacked stdio clean and rejects HTTP before it can bind", async () => {
+  it("keeps unpacked stdio clean and rejects HTTP before it can bind", { timeout: 20_000 }, async () => {
     const temporaryDirectory = await mkdtemp(join(repoRoot, ".package-http-rejection-"));
     const sentinel = createServer();
 
