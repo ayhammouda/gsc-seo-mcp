@@ -10,10 +10,6 @@ import { FileTokenStore, type StoredCredentials, type TokenStore } from "./auth/
 import { GoogleSearchConsoleClient, type RawSearchConsoleClient } from "./google-client.js";
 import type { Logger } from "./security.js";
 
-interface RuntimeService {
-  service: GscService;
-}
-
 function requireReadOnlyContainment(mode: unknown): void {
   if (mode !== "read_only") {
     throw new UserFacingError("WP-00 containment supports only GSC_SEO_MCP_MODE=read_only.");
@@ -69,7 +65,7 @@ export function validateOAuthCallback(url: URL, expectedState: string): string {
   return code;
 }
 
-function createRuntimeService(config: AppConfig, store?: TokenStore, logger?: Logger): RuntimeService {
+function createRuntimeService(config: AppConfig, store?: TokenStore, logger?: Logger): GscService {
   requireReadOnlyContainment(config.mode);
   const tokenStore = store ?? new FileTokenStore(config.tokenStorePath);
   let client: GoogleSearchConsoleClient | undefined;
@@ -123,18 +119,16 @@ function createRuntimeService(config: AppConfig, store?: TokenStore, logger?: Lo
   }
 
   return {
-    service: {
-      listSites: async (signal) => (await getClient()).listSites(signal),
-      searchAnalytics: async (input, signal) => (await getClient()).searchAnalytics(input, signal),
-      listSitemaps: async (siteUrl, signal) => (await getClient()).listSitemaps(siteUrl, signal),
-      inspectUrl: async (input, signal) => (await getClient()).inspectUrl(input, signal)
-    }
+    listSites: async (signal) => (await getClient()).listSites(signal),
+    searchAnalytics: async (input, signal) => (await getClient()).searchAnalytics(input, signal),
+    listSitemaps: async (siteUrl, signal) => (await getClient()).listSitemaps(siteUrl, signal),
+    inspectUrl: async (input, signal) => (await getClient()).inspectUrl(input, signal)
   };
 }
 
 export function createRuntimeMcpServer(config: AppConfig, store?: TokenStore, logger?: Logger): McpServer {
   const runtimeConfig = snapshotRuntimeConfig(config);
-  let runtime: RuntimeService | undefined;
+  let runtime: GscService | undefined;
   return createContainedGscMcpServer({
     mode: runtimeConfig.mode,
     allowedProperties: runtimeConfig.allowedProperties,
@@ -142,7 +136,7 @@ export function createRuntimeMcpServer(config: AppConfig, store?: TokenStore, lo
     totalDeadlineMs: runtimeConfig.totalDeadlineMs,
     getService: () => {
       runtime ??= createRuntimeService(runtimeConfig, store, logger);
-      return runtime.service;
+      return runtime;
     }
   });
 }

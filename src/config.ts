@@ -161,22 +161,20 @@ export function resolveConfig({ env, flags, onWarning }: ResolveConfigInput): Ap
     onWarning?.(LEGACY_READONLY_WARNING);
   }
 
-  const config: AppConfig = {
+  const googleClientId = flags.googleClientId ?? optionalString(env.GOOGLE_CLIENT_ID);
+  const googleClientSecret = flags.googleClientSecret ?? optionalString(env.GOOGLE_CLIENT_SECRET);
+
+  return {
     authMode: flags.authMode ?? envAuthMode ?? "stored",
     mode: resolveContainmentMode(flags.mode ?? envMode, legacyReadonly),
     allowedProperties,
     tokenStorePath:
       flags.tokenStorePath ?? optionalString(env.GSC_SEO_MCP_TOKEN_STORE_PATH) ?? DEFAULT_TOKEN_STORE_PATH,
     requestTimeoutMs: READ_ATTEMPT_TIMEOUT_MS,
-    totalDeadlineMs: READ_TOTAL_DEADLINE_MS
+    totalDeadlineMs: READ_TOTAL_DEADLINE_MS,
+    ...(googleClientId ? { googleClientId } : {}),
+    ...(googleClientSecret ? { googleClientSecret } : {})
   };
-
-  const googleClientId = flags.googleClientId ?? optionalString(env.GOOGLE_CLIENT_ID);
-  if (googleClientId) config.googleClientId = googleClientId;
-  const googleClientSecret = flags.googleClientSecret ?? optionalString(env.GOOGLE_CLIENT_SECRET);
-  if (googleClientSecret) config.googleClientSecret = googleClientSecret;
-
-  return config;
 }
 
 export function requireAllowedProperties(config: AppConfig): readonly string[] {

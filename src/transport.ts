@@ -10,6 +10,11 @@ export const STDIO_JSON_RPC_FRAME_MAX_BYTES = 262_144;
 const CARRIAGE_RETURN = 0x0d;
 const LINE_FEED = 0x0a;
 
+function toBuffer(chunk: Buffer | Uint8Array | string): Buffer {
+  if (typeof chunk === "string") return Buffer.from(chunk, "utf8");
+  return Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+}
+
 export class StdioFrameTooLargeError extends RangeError {
   readonly code = "STDIO_FRAME_TOO_LARGE";
   readonly maxBytes = STDIO_JSON_RPC_FRAME_MAX_BYTES;
@@ -48,12 +53,7 @@ export class BoundedStdioServerTransport implements Transport {
   private readonly handleData = (chunk: Buffer | Uint8Array | string): void => {
     if (this.closed) return;
 
-    const bytes =
-      typeof chunk === "string"
-        ? Buffer.from(chunk, "utf8")
-        : Buffer.isBuffer(chunk)
-          ? chunk
-          : Buffer.from(chunk);
+    const bytes = toBuffer(chunk);
 
     let offset = 0;
     while (offset < bytes.length && !this.closed) {
@@ -75,11 +75,7 @@ export class BoundedStdioServerTransport implements Transport {
     }
   };
 
-  private readonly handleInputError = (error: Error): void => {
-    this.onerror?.(error);
-  };
-
-  private readonly handleOutputError = (error: Error): void => {
+  private readonly handleStreamError = (error: Error): void => {
     this.onerror?.(error);
   };
 
@@ -101,10 +97,10 @@ export class BoundedStdioServerTransport implements Transport {
 
     this.started = true;
     this.stdin.on("data", this.handleData);
-    this.stdin.on("error", this.handleInputError);
+    this.stdin.on("error", this.handleStreamError);
     this.stdin.on("end", this.handleStreamClose);
     this.stdin.on("close", this.handleStreamClose);
-    this.stdout.on("error", this.handleOutputError);
+    this.stdout.on("error", this.handleStreamError);
     this.stdout.on("close", this.handleStreamClose);
     return Promise.resolve();
   }
@@ -117,15 +113,9 @@ export class BoundedStdioServerTransport implements Transport {
     const serialized = serializeMessage(message);
     await new Promise<void>((resolve, reject) => {
       let settled = false;
-      const handleDrain = (): void => {
-        succeed();
-      };
-      const handleError = (error: Error): void => {
-        fail(error);
-      };
       const cleanup = (): void => {
-        this.stdout.off("drain", handleDrain);
-        this.stdout.off("error", handleError);
+        this.stdout.off("drain", succeed);
+        this.stdout.off("error", fail);
         this.pendingSendCancellations.delete(fail);
       };
       const succeed = (): void => {
@@ -142,12 +132,12 @@ export class BoundedStdioServerTransport implements Transport {
       };
 
       this.pendingSendCancellations.add(fail);
-      this.stdout.once("error", handleError);
+      this.stdout.once("error", fail);
       try {
         if (this.stdout.write(serialized)) {
           succeed();
         } else {
-          this.stdout.once("drain", handleDrain);
+          this.stdout.once("drain", succeed);
         }
       } catch (error) {
         fail(
@@ -171,10 +161,10 @@ export class BoundedStdioServerTransport implements Transport {
     }
 
     this.stdin.off("data", this.handleData);
-    this.stdin.off("error", this.handleInputError);
+    this.stdin.off("error", this.handleStreamError);
     this.stdin.off("end", this.handleStreamClose);
     this.stdin.off("close", this.handleStreamClose);
-    this.stdout.off("error", this.handleOutputError);
+    this.stdout.off("error", this.handleStreamError);
     this.stdout.off("close", this.handleStreamClose);
 
     if (this.stdin.listenerCount("data") === 0) {
