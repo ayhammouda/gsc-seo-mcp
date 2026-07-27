@@ -67,7 +67,8 @@ function validateAllowedProperties(name: string, value: unknown): readonly strin
     throw new Error(
       `${name} must contain valid, normalization-unique exact Search Console properties: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }

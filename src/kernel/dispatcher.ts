@@ -399,7 +399,6 @@ export function createCapabilityDispatcher(input: CapabilityDispatcherDependenci
   const dispatcher: CapabilityDispatcher = Object.freeze({
     async dispatch(invocation: CapabilityInvocation): Promise<CallToolResult> {
       const invocationStartedAtMs = Date.now();
-      let invocationRecord: Record<string, unknown> = {};
       let safeToolName = "<invalid>";
       let context: RequestContext | undefined;
       let capability: CapabilityDefinition | undefined;
@@ -410,7 +409,7 @@ export function createCapabilityDispatcher(input: CapabilityDispatcherDependenci
       let budgetOutcome: TerminalAuditBudgetOutcome = "not-reached";
 
       try {
-        invocationRecord = isRecord(invocation) ? invocation : {};
+        const invocationRecord: Record<string, unknown> = isRecord(invocation) ? invocation : {};
         const rawToolName = invocationRecord.toolName;
         safeToolName =
           typeof rawToolName === "string" && /^[a-z0-9_]{1,128}$/.test(rawToolName)
