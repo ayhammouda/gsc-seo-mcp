@@ -8,6 +8,7 @@ import {
   createDeploymentProfile,
   createEphemeralAuditPort,
   createExactPropertyAllowlistPolicy,
+  createGscServiceExecutorPort,
   createPassThroughBudgetPort,
   createRedactingCallToolResultErrorPort,
   createRequestContextFactory,
@@ -61,6 +62,72 @@ async function withClient<T>(
     await server.close();
   }
 }
+
+function withObservableAudit(getService: () => GscService = fakeService) {
+  const profile = createDeploymentProfile({
+    profileId: "audit-coverage",
+    deploymentProfile: "local-stdio",
+    accessMode: "read_only",
+    transport: "stdio",
+    allowedProperties: [ALLOWED_PROPERTY],
+    totalDeadlineMs: 45_000
+  });
+  const identity = { actorId: "local-parent-process", tenantId: "local" };
+  const audit = createEphemeralAuditPort();
+  const dispatcher = createCapabilityDispatcher({
+    registry: gscCapabilityRegistry,
+    profile,
+    contextFactory: createRequestContextFactory({ profile }),
+    staticPolicy: createExactPropertyAllowlistPolicy({
+      allowedProperties: profile.allowedProperties,
+      expectedIdentity: identity
+    }),
+    budget: createPassThroughBudgetPort(),
+    executor: createGscServiceExecutorPort(getService),
+    errors: createRedactingCallToolResultErrorPort(),
+    audit
+  });
+
+  return { audit, server: createGscMcpServer({ dispatcher, identity }) };
+}
+
+describe("terminal audit coverage over MCP", () => {
+  it("audits a cross-property inspection attempt", async () => {
+    const { audit, server } = withObservableAudit();
+
+    const result = await withClient(server, (client) =>
+      client.callTool({
+        name: "gsc_inspect_url",
+        arguments: {
+          site_url: ALLOWED_PROPERTY,
+          inspection_url: "https://evil.example.net/x"
+        }
+      })
+    );
+
+    expect(result.isError).toBe(true);
+    expect(audit.snapshot()).toHaveLength(1);
+    expect(audit.snapshot()[0]).toMatchObject({
+      tool: "gsc_inspect_url",
+      resultCode: "resource_containment_denied"
+    });
+  });
+
+  it("audits a non-allowlisted property attempt", async () => {
+    const { audit, server } = withObservableAudit();
+
+    await withClient(server, (client) =>
+      client.callTool({ name: "gsc_list_sitemaps", arguments: { site_url: DENIED_PROPERTY } })
+    );
+
+    expect(audit.snapshot()).toHaveLength(1);
+    expect(audit.snapshot()[0]).toMatchObject({
+      tool: "gsc_list_sitemaps",
+      policyDecision: "deny",
+      resultCode: "policy_denied"
+    });
+  });
+});
 
 describe("manifest-driven MCP tools", () => {
   afterEach(() => {

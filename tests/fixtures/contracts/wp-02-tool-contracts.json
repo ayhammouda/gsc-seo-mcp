@@ -1,13 +1,12 @@
 {
   "gsc_list_sites": {
     "input": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {},
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false
     },
     "output": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "sites": {
@@ -32,12 +31,12 @@
       "required": [
         "sites"
       ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false
     }
   },
   "gsc_search_analytics": {
     "input": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "site_url": {
@@ -131,7 +130,6 @@
                   },
                   "required": [
                     "dimension",
-                    "operator",
                     "expression"
                   ],
                   "additionalProperties": false
@@ -139,7 +137,6 @@
               }
             },
             "required": [
-              "group_type",
               "filters"
             ],
             "additionalProperties": false
@@ -149,16 +146,12 @@
       "required": [
         "site_url",
         "start_date",
-        "end_date",
-        "dimensions",
-        "row_limit",
-        "start_row",
-        "filters"
+        "end_date"
       ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false
     },
     "output": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "rows": {
@@ -203,12 +196,12 @@
         "rows",
         "note"
       ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false
     }
   },
   "gsc_list_sitemaps": {
     "input": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "site_url": {
@@ -219,10 +212,10 @@
       "required": [
         "site_url"
       ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false
     },
     "output": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "sitemaps": {
@@ -283,12 +276,12 @@
       "required": [
         "sitemaps"
       ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false
     }
   },
   "gsc_inspect_url": {
     "input": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "site_url": {
@@ -308,13 +301,12 @@
       },
       "required": [
         "site_url",
-        "inspection_url",
-        "language_code"
+        "inspection_url"
       ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false
     },
     "output": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "inspectionResultLink": {
@@ -372,6 +364,7 @@
       "required": [
         "indexStatus"
       ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false
     }
   }

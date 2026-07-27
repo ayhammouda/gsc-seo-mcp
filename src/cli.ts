@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { FileTokenStore, getAuthStatus } from "./auth/token-store.js";
-import { requireAllowedProperties, resolveConfig, type ConfigFlags } from "./config.js";
+import { parseCliFlags, requireAllowedProperties, resolveConfig } from "./config.js";
 import { GSC_SERVER_VERSION } from "./mcp-server.js";
 import { createRuntimeMcpServer, runLocalOAuthLogin } from "./oauth.js";
 import { createStderrLogger, redactSecrets } from "./security.js";
@@ -26,49 +26,6 @@ Options:
 `);
 }
 
-function parseFlags(args: string[]): ConfigFlags {
-  const flags: ConfigFlags = {};
-  for (let index = 0; index < args.length; index += 1) {
-    const current = args[index];
-    if (!current?.startsWith("--")) continue;
-    const [name, inlineValue] = current.split("=", 2);
-    const value = inlineValue ?? args[index + 1];
-    if (inlineValue === undefined) index += 1;
-    if (value === undefined) throw new Error(`${name} requires a value`);
-
-    switch (name) {
-      case "--auth-mode":
-        if (value !== "stored" && value !== "adc") throw new Error("--auth-mode must be stored or adc");
-        flags.authMode = value;
-        break;
-      case "--mode":
-        if (value === "full_admin") {
-          throw new Error(
-            "--mode full_admin is unsupported because Google Search Console has no full-admin OAuth scope or API mode."
-          );
-        }
-        if (value !== "read_only" && value !== "operator") {
-          throw new Error("--mode must be read_only or operator");
-        }
-        flags.mode = value;
-        break;
-      case "--allowed-property":
-        flags.allowedProperties = [...(flags.allowedProperties ?? []), value];
-        break;
-      case "--readonly":
-        if (value !== "true" && value !== "false") throw new Error("--readonly must be true or false");
-        flags.legacyReadonly = value === "true";
-        break;
-      case "--token-store":
-        flags.tokenStorePath = value;
-        break;
-      default:
-        throw new Error(`Unknown option ${name}`);
-    }
-  }
-  return flags;
-}
-
 function commandFlags(...values: Array<string | undefined>): string[] {
   return values.filter((value): value is string => Boolean(value));
 }
@@ -88,7 +45,7 @@ async function main(argv: string[]): Promise<void> {
   if (command === "stdio") {
     const config = resolveConfig({
       env: process.env,
-      flags: parseFlags(commandFlags(subcommand, ...rest)),
+      flags: parseCliFlags(commandFlags(subcommand, ...rest)),
       onWarning: (message) => logger.warn(message)
     });
     requireAllowedProperties(config);
@@ -100,7 +57,7 @@ async function main(argv: string[]): Promise<void> {
   if (command === "auth") {
     const config = resolveConfig({
       env: process.env,
-      flags: parseFlags(rest),
+      flags: parseCliFlags(rest),
       onWarning: (message) => logger.warn(message)
     });
     const store = new FileTokenStore(config.tokenStorePath);

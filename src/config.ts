@@ -23,6 +23,53 @@ export interface ResolveConfigInput {
   onWarning?: (message: string) => void;
 }
 
+export function parseCliFlags(args: readonly string[]): ConfigFlags {
+  const flags: ConfigFlags = {};
+  for (let index = 0; index < args.length; index += 1) {
+    const current = args[index];
+    if (!current?.startsWith("--")) continue;
+    // Split on the first "=" only. Property paths may legitimately contain "=",
+    // and a split that drops the remainder silently widens the allowlist.
+    const separator = current.indexOf("=");
+    const name = separator === -1 ? current : current.slice(0, separator);
+    const inlineValue = separator === -1 ? undefined : current.slice(separator + 1);
+    const value = inlineValue ?? args[index + 1];
+    if (inlineValue === undefined) index += 1;
+    if (value === undefined) throw new Error(`${name} requires a value`);
+
+    switch (name) {
+      case "--auth-mode":
+        if (value !== "stored" && value !== "adc") throw new Error("--auth-mode must be stored or adc");
+        flags.authMode = value;
+        break;
+      case "--mode":
+        if (value === "full_admin") {
+          throw new Error(
+            "--mode full_admin is unsupported because Google Search Console has no full-admin OAuth scope or API mode."
+          );
+        }
+        if (value !== "read_only" && value !== "operator") {
+          throw new Error("--mode must be read_only or operator");
+        }
+        flags.mode = value;
+        break;
+      case "--allowed-property":
+        flags.allowedProperties = [...(flags.allowedProperties ?? []), value];
+        break;
+      case "--readonly":
+        if (value !== "true" && value !== "false") throw new Error("--readonly must be true or false");
+        flags.legacyReadonly = value === "true";
+        break;
+      case "--token-store":
+        flags.tokenStorePath = value;
+        break;
+      default:
+        throw new Error(`Unknown option ${name}`);
+    }
+  }
+  return flags;
+}
+
 const DEFAULT_TOKEN_STORE_PATH = join(homedir(), ".gsc-seo-mcp", "tokens.json");
 export const LEGACY_READONLY_WARNING =
   "GSC_SEO_MCP_READONLY=true is deprecated; use GSC_SEO_MCP_MODE=read_only instead.";

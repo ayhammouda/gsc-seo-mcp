@@ -18,7 +18,7 @@ Release status: frozen; WP-01 is not production authorization
 | Registration/dispatch parity | A synthetic registry proves the advertised and executable capability sets come from the same dispatcher binding |
 | Bootstrap immutability | Post-construction mutation of the caller's runtime/credential configuration cannot affect the lazy credential path |
 | Account result policy | Mixed account inventory is filtered according to manifest resource metadata and the exact property allowlist |
-| Terminal integrity | Malformed invocations, throwing accessors, reservation failures, release failures, and audit failure are projected through one terminal path |
+| Terminal integrity | Invocations that reach the dispatcher — including throwing accessors, containment denials, reservation failures, release failures, and audit failure — are projected through one terminal path. Arguments rejected by the MCP SDK against the advertised tool schema never enter the dispatcher and are returned as protocol-level `InvalidParams`. |
 
 ## Validation
 

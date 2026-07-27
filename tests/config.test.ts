@@ -1,5 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { LEGACY_READONLY_WARNING, requireAllowedProperties, resolveConfig } from "../src/config.js";
+import {
+  LEGACY_READONLY_WARNING,
+  parseCliFlags,
+  requireAllowedProperties,
+  resolveConfig
+} from "../src/config.js";
+
+describe("parseCliFlags", () => {
+  it("keeps the whole inline value when a property path contains an equals sign", () => {
+    expect(parseCliFlags(["--allowed-property=https://example.com/a=b/"]).allowedProperties).toEqual([
+      "https://example.com/a=b/"
+    ]);
+  });
+
+  it("parses the same value identically in inline and space-separated form", () => {
+    const property = "https://example.com/store/=weird/";
+
+    expect(parseCliFlags([`--allowed-property=${property}`])).toEqual(
+      parseCliFlags(["--allowed-property", property])
+    );
+  });
+
+  it("accumulates repeated property flags in order", () => {
+    expect(
+      parseCliFlags([
+        "--allowed-property=https://a.example.com/",
+        "--allowed-property",
+        "sc-domain:b.example.com"
+      ]).allowedProperties
+    ).toEqual(["https://a.example.com/", "sc-domain:b.example.com"]);
+  });
+
+  it("rejects unknown options and value-less flags", () => {
+    expect(() => parseCliFlags(["--nope=1"])).toThrow(/Unknown option --nope/);
+    expect(() => parseCliFlags(["--token-store"])).toThrow(/--token-store requires a value/);
+  });
+});
 
 describe("resolveConfig", () => {
   it("defaults to the stored-auth read-only containment profile", () => {

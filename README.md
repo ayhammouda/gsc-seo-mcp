@@ -203,4 +203,4 @@ Quality and release docs:
 - The token store is not encrypted yet; see the `TODO(prod)` marker in `src/auth/token-store.ts`.
 - MCP transport is stdio-only; anonymous HTTP transport is not included in the CLI or packed artifact.
 - Server startup requires a non-empty exact property allowlist and a read-only containment mode.
-- MCP registration contains no direct Google service path; every active call traverses the capability dispatcher.
+- MCP registration contains no direct Google service path; every active call that satisfies its advertised tool schema traverses the capability dispatcher. Schema-invalid arguments are rejected by the MCP SDK before the dispatcher is entered and never reach policy, budgets, or credentials.

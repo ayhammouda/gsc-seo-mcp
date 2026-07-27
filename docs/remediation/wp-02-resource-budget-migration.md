@@ -21,7 +21,7 @@ The public changes are:
 - Search Analytics accepts at most six unique supported dimensions, four filter groups, eight filters per group, 4,096 characters per expression, 1,000 rows per call, and a pagination window ending no later than row 25,000.
 - URL Inspection language tags must be valid BCP-47 tags of at most 35 characters.
 
-The generated current contract is pinned in `tests/fixtures/contracts/wp-02-tool-contracts.json`. The historical WP-00 contract fixture remains byte-for-byte frozen and is no longer treated as the current schema.
+The current contract is pinned in `tests/fixtures/contracts/wp-02-tool-contracts.json`. It is captured from a live `tools/list` response over an in-memory MCP client, so the pinned evidence is the contract clients receive rather than a re-derivation of it. Re-deriving with `z.toJSONSchema` defaults would use the output projection and draft-2020-12, which disagrees with the SDK's draft-07 input projection about which defaulted fields are required. The historical WP-00 contract fixture remains byte-for-byte frozen and is no longer treated as the current schema.
 
 ### Unknown-field rollout disposition
 

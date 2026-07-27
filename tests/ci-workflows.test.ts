@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -7,6 +8,40 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 function readRepoFile(path: string): string {
   return readFileSync(resolve(repoRoot, path), "utf8");
+}
+
+function packageScript(name: string): string {
+  const scripts = (JSON.parse(readRepoFile("package.json")) as {
+    scripts: Record<string, string>;
+  }).scripts;
+  const script = scripts[name];
+  if (script === undefined) throw new Error(`package.json is missing the ${name} script`);
+  return script;
+}
+
+/**
+ * Vitest CLI positional arguments are substring filters applied after `include`
+ * globbing, never an additional include. Asking vitest itself which files a CI
+ * command collects is the only way to prove the command reaches a directory;
+ * asserting on the script string cannot.
+ */
+function filesCollectedBy(script: string): readonly string[] {
+  const vitestInvocation = script.split("&&").at(-1)?.trim() ?? "";
+  const args = vitestInvocation.replace(/^vitest\s+run\s*/, "");
+  const listed = execFileSync(
+    "sh",
+    ["-c", `./node_modules/.bin/vitest list --filesOnly ${args}`],
+    { cwd: repoRoot, encoding: "utf8" }
+  );
+  return listed.split("\n").map((line) => line.trim()).filter((line) => line.endsWith(".test.ts"));
+}
+
+function testFilesOnDisk(directory = "tests"): readonly string[] {
+  return readdirSync(resolve(repoRoot, directory), { withFileTypes: true }).flatMap((entry) => {
+    const path = posix.join(directory, entry.name);
+    if (entry.isDirectory()) return testFilesOnDisk(path);
+    return entry.name.endsWith(".test.ts") ? [path] : [];
+  });
 }
 
 describe("GitHub workflow coverage", () => {
@@ -24,6 +59,17 @@ describe("GitHub workflow coverage", () => {
     expect(workflow).toContain("npm run pack:dry-run");
     expect(workflow).toContain("node dist/cli.js --version");
   });
+
+  it("collects every non-live test file across the two commands CI runs", () => {
+    const collected = new Set([
+      ...filesCollectedBy(packageScript("test:unit")),
+      ...filesCollectedBy(packageScript("test:e2e"))
+    ]);
+    const expected = testFilesOnDisk().filter((path) => !path.startsWith("tests/live/"));
+
+    expect(expected.length).toBeGreaterThan(0);
+    expect([...expected].filter((path) => !collected.has(path))).toEqual([]);
+  }, 60_000);
 
   it("keeps security and supply-chain workflows enabled", () => {
     const security = readRepoFile(".github/workflows/security.yml");

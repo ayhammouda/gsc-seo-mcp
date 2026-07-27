@@ -8,6 +8,7 @@ import {
   createPassThroughBudgetPort,
   createRedactingCallToolResultErrorPort,
   createRequestContextFactory,
+  KernelDispatchError,
   gscCapabilityRegistry
 } from "../../src/kernel/index.js";
 import type {
@@ -638,6 +639,89 @@ describe("terminal audit behavior", () => {
     expect(result.isError).toBe(true);
     expect(result.content[0]).toMatchObject({ type: "text", text: "Terminal audit recording failed" });
     expect(attempts).toHaveBeenCalledTimes(1);
+  });
+
+  it("invokes lease methods on the object the budget port returned", async () => {
+    const releases: string[] = [];
+    class PrivateStateLease {
+      readonly status = "reserved" as const;
+      readonly reservationId = "lease-1";
+      #gatewayOperations = 0;
+      consumeGatewayOperation(): void {
+        this.#gatewayOperations += 1;
+      }
+      release(outcome: string): Promise<void> {
+        releases.push(`${outcome}:${this.#gatewayOperations}`);
+        return Promise.resolve();
+      }
+    }
+    const budget = budgetPort({ reserve: () => Promise.resolve(new PrivateStateLease() as never) });
+    const dispatcher = createCapabilityDispatcher(validDependencies({ budget }));
+
+    const result = await dispatcher.dispatch({ toolName: "gsc_list_sites", input: {}, identity });
+
+    expect(result.isError).not.toBe(true);
+    expect(releases).toEqual(["success:1"]);
+  });
+
+  it("releases a reservation whose lease fails validation", async () => {
+    let reserved = 0;
+    const budget = budgetPort({
+      reserve: () => {
+        reserved += 1;
+        return Promise.resolve({
+          status: "granted",
+          reservationId: "lease-1",
+          consumeGatewayOperation: () => undefined,
+          release: () => {
+            reserved -= 1;
+            return Promise.resolve();
+          }
+        } as never);
+      }
+    });
+    const dispatcher = createCapabilityDispatcher(validDependencies({ budget }));
+
+    const result = await dispatcher.dispatch({ toolName: "gsc_list_sites", input: {}, identity });
+
+    expect(result.isError).toBe(true);
+    expect(reserved).toBe(0);
+  });
+
+  it("preserves the original failure when the audit sink also fails", async () => {
+    const audit: AuditPort = {
+      durability: "ephemeral",
+      recordTerminal: () => Promise.reject(new Error("sink unavailable"))
+    };
+    const staticPolicy = allowPolicy({
+      authorizeStatic: () =>
+        Promise.resolve({
+          outcome: "deny",
+          policyKey: "test-policy",
+          reason: "property is not allowed by the exact property policy"
+        })
+    });
+    let captured: unknown;
+    const errors: ErrorPort = {
+      toCallToolResult: (error) => {
+        captured = error;
+        return { isError: true, content: [{ type: "text", text: "captured" }] };
+      }
+    };
+    const dispatcher = createCapabilityDispatcher(
+      validDependencies({ audit, staticPolicy, errors })
+    );
+
+    await dispatcher.dispatch({ toolName: "gsc_list_sites", input: {}, identity });
+
+    expect(captured).toBeInstanceOf(KernelDispatchError);
+    expect((captured as KernelDispatchError).code).toBe("audit_unavailable");
+    const cause = (captured as KernelDispatchError).cause;
+    expect(cause).toBeInstanceOf(AggregateError);
+    expect((cause as AggregateError).errors.map((entry: unknown) => (entry as Error).message)).toEqual([
+      "property is not allowed by the exact property policy",
+      "sink unavailable"
+    ]);
   });
 
   it("redacts error results without a second audit event", async () => {

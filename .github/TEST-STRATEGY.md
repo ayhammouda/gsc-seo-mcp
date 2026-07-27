@@ -66,7 +66,6 @@ Containment coverage must additionally prove:
 - `tests/e2e/stdio-client.e2e.test.ts` connects to `node dist/cli.js stdio` with SDK `StdioClientTransport` and verifies `tools/list` without stderr noise.
 - `tests/e2e/payload-budget.test.ts` prevents full structured payload duplication in model-visible text and verifies tool error redaction.
 - `tests/e2e/deterministic-budgets.e2e.test.ts` proves production composition enforces output-item and actor-concurrency ceilings through a real MCP client.
-- `tests/resources/`, `tests/kernel/budgets.test.ts`, and `tests/transport.test.ts` retain the WP-02 semantic-resource, deterministic-budget, and byte-framing boundary corpora.
 - Package and CLI tests verify that HTTP is absent from help, commands, and the npm artifact.
 
 Run:
@@ -74,6 +73,22 @@ Run:
 ```bash
 npm run test:e2e
 ```
+
+## Boundary Corpora
+
+These are unit-layer corpora, not E2E. They run under `test:unit`.
+
+- `tests/resources/` retains the WP-02 semantic-resource boundary corpus.
+- `tests/kernel/` retains the dispatcher stage-order, deterministic-budget, adapter, and profile/manifest corpora.
+- `tests/transport.test.ts` retains the byte-framing boundary corpus.
+
+Run:
+
+```bash
+npm run test:unit
+```
+
+`test:unit` selects by exclusion (`--exclude "tests/e2e/**" --exclude "tests/live/**"`) rather than by an include glob. Vitest CLI positional arguments are substring filters applied after `include` globbing, so a path-filtered command silently drops any test directory it does not name. `tests/ci-workflows.test.ts` asks Vitest which files each CI command actually collects and fails if any non-live test file is unreachable.
 
 ## Live Google E2E
 
