@@ -4,7 +4,7 @@ Date: 2026-07-27
 Branch: `codex/holistic-remediation-wp00`
 Audited base: `b01d86d9820cd940f4077d32244c1685e6aeb572`
 Release status: frozen; WP-02 is not production authorization
-CI status: local gates pass; retained CI evidence is pending a reviewed commit and CI run
+CI status: functional matrix and CodeQL pass; dependency audit remains an explicit WP-10 release blocker
 
 ## Implemented Gate
 
@@ -33,7 +33,7 @@ CI status: local gates pass; retained CI evidence is pending a reviewed commit a
 - `npm run build`: pass as part of both full and end-to-end test gates.
 - `git diff --check`: pass.
 - `npm pack --dry-run --json --ignore-scripts`: pass against the built artifact.
-- Retained CI evidence: pending. This worktree has not been committed or pushed, so WP-02 remains blocked on the plan's CI-evidence acceptance gate.
+- Retained CI evidence: the [Node 22/24 Linux/macOS matrix](https://github.com/ayhammouda/gsc-seo-mcp/actions/runs/30266046709) and [CodeQL analysis](https://github.com/ayhammouda/gsc-seo-mcp/actions/runs/30266046746) pass. The [dependency-audit workflow](https://github.com/ayhammouda/gsc-seo-mcp/actions/runs/30266046719) reports the known transitive advisories assigned to WP-10; that release blocker remains open and does not weaken the freeze.
 - Historical WP-00 contract fixture:
   `45e024a09a3bdb7fe049b9c9459de90fb5324f0237a6b52591528edbe3b2ff9e`.
 - Historical WP-01 manifest fixture:
