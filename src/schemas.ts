@@ -12,8 +12,7 @@ import {
   parseCalendarDateRange,
   parseHttpTargetUrl,
   parseSearchConsoleProperty,
-  isWellFormedBcp47LanguageTag,
-  requireTargetUnderProperty
+  isWellFormedBcp47LanguageTag
 } from "./resources/index.js";
 import type { DecliningPage, InspectUrlOutput, KeywordOpportunity } from "./types.js";
 
@@ -119,24 +118,19 @@ export const listSitemapsInputSchema = z.strictObject({
   site_url: siteUrlSchema
 });
 
-function isInspectionUnderSite(siteUrl: string, inspectionUrl: string): boolean {
-  return succeeds(() => {
-    const property = parseSearchConsoleProperty(siteUrl);
-    const target = parseHttpTargetUrl(inspectionUrl);
-    requireTargetUnderProperty(property, target);
-  });
-}
-
-export const inspectUrlInputSchema = z
-  .strictObject({
-    site_url: siteUrlSchema,
-    inspection_url: httpTargetUrlSchema,
-    language_code: languageCodeSchema.default("en-US")
-  })
-  .refine((input) => isInspectionUnderSite(input.site_url, input.inspection_url), {
-    message: "inspection_url must be under site_url",
-    path: ["inspection_url"]
-  });
+/**
+ * Property containment is deliberately NOT a schema refinement. The MCP SDK
+ * validates `inputSchema` before it invokes the tool callback, so a rule kept
+ * here would reject cross-property probes outside the capability kernel and
+ * leave no terminal audit event. `selectResource` in the dispatcher owns this
+ * rule instead. Nothing is lost on the wire: refinements are unrepresentable in
+ * JSON Schema, so this rule was never part of the advertised tool contract.
+ */
+export const inspectUrlInputSchema = z.strictObject({
+  site_url: siteUrlSchema,
+  inspection_url: httpTargetUrlSchema,
+  language_code: languageCodeSchema.default("en-US")
+});
 
 export const findDecliningPagesInputSchema = z
   .strictObject({

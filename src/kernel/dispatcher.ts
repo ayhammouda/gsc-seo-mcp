@@ -114,6 +114,21 @@ export class KernelDispatchError extends Error {
   }
 }
 
+/**
+ * A reservation that failed lease validation has already mutated the port's
+ * counters, so the permits leak unless the port is given a chance to reclaim
+ * them. Best effort only: a port that cannot release its own malformed lease
+ * has nothing further to offer.
+ */
+async function releaseUnvalidatedReservation(candidate: unknown): Promise<void> {
+  if (!isRecord(candidate)) return;
+  const release = candidate.release;
+  if (typeof release !== "function") return;
+  await Promise.resolve()
+    .then(() => (release as BudgetLease["release"]).call(candidate, "error"))
+    .catch(() => undefined);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -201,7 +216,15 @@ function selectResource(capability: CapabilityDefinition, input: unknown): Norma
       const target = parseHttpTargetUrl(
         exactInputString(input, capability.resourceScope.targetInputField)
       );
-      requireTargetUnderProperty(property, target);
+      try {
+        requireTargetUnderProperty(property, target);
+      } catch (error) {
+        throw new KernelDispatchError(
+          "resource_containment_denied",
+          "The requested target is not contained by the requested property",
+          { cause: error }
+        );
+      }
       return Object.freeze({
         kind: "property-target",
         property,
@@ -470,14 +493,18 @@ export function createCapabilityDispatcher(input: CapabilityDispatcherDependenci
           decision.authorizedResource
         );
 
+        let reservedLease: unknown;
         try {
-          const rawLease = await dependencies.budget.reserve({
+          reservedLease = await dependencies.budget.reserve({
             context,
             capability,
             resource,
             input: normalizedInput
           });
-          lease = budgetLeaseSchema.parse(rawLease);
+          // Validate the shape but keep the port's own object. `parse()` returns a
+          // clone, which would invoke the lease methods detached from their receiver.
+          budgetLeaseSchema.parse(reservedLease);
+          lease = reservedLease as BudgetLease;
           budgetOutcome = "reserved";
         } catch (error) {
           budgetOutcome =
@@ -485,6 +512,7 @@ export function createCapabilityDispatcher(input: CapabilityDispatcherDependenci
             error.code.startsWith("budget_concurrency_")
               ? "concurrency-denied"
               : "reservation-error";
+          if (lease === undefined) await releaseUnvalidatedReservation(reservedLease);
           if (error instanceof BudgetLimitError) throw error;
           throw new KernelDispatchError(
             "budget_reservation_failed",
@@ -571,8 +599,15 @@ export function createCapabilityDispatcher(input: CapabilityDispatcherDependenci
       try {
         await dependencies.audit.recordTerminal(event);
       } catch (error) {
+        const cause =
+          failure === undefined
+            ? error
+            : new AggregateError(
+                [failure, error],
+                "Capability execution and terminal audit both failed"
+              );
         failure = new KernelDispatchError("audit_unavailable", "Terminal audit recording failed", {
-          cause: error
+          cause
         });
       }
 

@@ -18,6 +18,7 @@
 - Google API calls must use per-request timeout and `AbortSignal`.
 - The versioned capability manifest is the only source of active tool names, schemas, MCP metadata, Google method/scope assumptions, and profile visibility.
 - Every MCP registration and compatibility invocation must traverse the capability dispatcher; do not add handler-specific authorization, budget, execution, result, or logging paths.
+- Keep semantic authorization rules (property containment, allowlist membership) out of the tool `inputSchema`. The MCP SDK validates that schema before invoking the tool callback, so a rule placed there denies the call outside the kernel and emits no terminal audit event. Put such rules in `selectResource` or the static policy port.
 - Core kernel modules must not depend on transport, CLI, OAuth, or concrete Google client modules.
 - Use the shared branded resource parsers for Search Console properties, HTTP targets, sitemap targets, and calendar dates. Do not recreate authorization identity with raw string operations or `Date.parse`.
 - Preserve the configured property `apiValue` for Google calls and use `policyKey` only for authorization, containment, collision checks, and concurrency keys.

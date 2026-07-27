@@ -157,9 +157,12 @@ describe("Search Console property allowlist", () => {
     expect(() => parseSearchConsolePropertyAllowlist(values)).toThrow(/normalized collision/);
   });
 
-  it.each([[], "sc-domain:example.com", null, [42]])("rejects malformed allowlist %j", (value) => {
-    expect(() => parseSearchConsolePropertyAllowlist(value)).toThrow();
-  });
+  it.each([[[]], ["sc-domain:example.com"], [null], [[42]], [undefined]])(
+    "rejects malformed allowlist %j",
+    (value: unknown) => {
+      expect(() => parseSearchConsolePropertyAllowlist(value)).toThrow();
+    }
+  );
 
   it("accepts exactly 1,000 unique properties and rejects one entry over before parsing", () => {
     const exact = Array.from(

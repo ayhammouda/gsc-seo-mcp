@@ -37,6 +37,7 @@ The dispatcher also gains mandatory raw-input, normalized-reservation, lease-sco
 - The 45-second context rejects already-expired execution and bounds the direct executor signal, but central attempt orchestration, rate windows, Google quota accounting, retries, fairness, and cancellation classification remain WP-07.
 - Terminal audit remains ephemeral and operational readiness is absent. WP-08 remains a production gate.
 - Sitemap mutation remains unregistered. The sitemap-target validator is dormant until WP-09 approval, intent, and reconciliation controls exist.
+- Compound analytics (`gsc_find_declining_pages`, `gsc_find_keyword_opportunities`) is in the unsupported ledger, but its implementation is dormant rather than removed: `src/insights.ts` and the six unreferenced schemas in `src/schemas.ts` (`findDecliningPagesInputSchema`, `findKeywordOpportunitiesInputSchema`, `decliningPageSchema`, `keywordOpportunitySchema`, `decliningPagesOutputSchema`, `keywordOpportunitiesOutputSchema`) still compile into the published `dist/`. Nothing imports them at runtime, no manifest entry reaches them, and the package exposes `bin` only with no `main`/`exports`, so no caller can invoke them. They are retained for WP-07 workflow-budget restoration and must be either registered under WP-07 budgets or deleted before the freeze lifts.
 - HTTP is absent. Hosted body/header limits, OIDC identity, distributed quotas, and tenant isolation remain conditional WP-R1 gates.
 - Dependency, release, and registry findings remain WP-10 through WP-12.
 

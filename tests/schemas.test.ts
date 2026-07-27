@@ -149,14 +149,18 @@ describe("tool input schemas", () => {
     ).toThrow(/90 inclusive calendar days/);
   });
 
-  it("requires inspected URLs to belong to URL-prefix properties", () => {
-    expect(() =>
+  it("leaves property containment to the dispatcher rather than the wire schema", () => {
+    // The MCP SDK validates inputSchema before the tool callback runs, so a
+    // containment refinement here would reject cross-property probes outside the
+    // capability kernel and emit no terminal audit event. selectResource owns
+    // this rule; tests/tools.test.ts asserts the audited denial.
+    expect(
       inspectUrlInputSchema.parse({
         site_url: "https://example.com/",
         inspection_url: "https://other.example/page",
         language_code: "en-US"
-      })
-    ).toThrow(/under site_url/);
+      }).inspection_url
+    ).toBe("https://other.example/page");
 
     expect(
       inspectUrlInputSchema.parse({

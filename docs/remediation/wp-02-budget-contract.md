@@ -8,7 +8,7 @@ Applies to: single-process local stdio read-only containment
 | Boundary | Limit | Enforcement point |
 | --- | ---: | --- |
 | Inbound stdio JSON-RPC payload | 262,144 bytes | Bounded transport, before UTF-8 decode and JSON parse |
-| Dispatcher invocation JSON | 262,144 UTF-8 bytes | Raw budget assertion before Zod |
+| Dispatcher invocation JSON | 262,144 UTF-8 bytes | Raw budget assertion before the dispatcher's own Zod parse. On the MCP path the SDK validates the advertised tool schema first, so wire traffic reaching this assertion is already schema-valid; the bounded transport still caps the frame at the same ceiling before decode. |
 | Property or URL identifier | 8,192 UTF-8 bytes | Shared branded parser and wire schema |
 | Property allowlist | 1,000 unique normalized entries | Shared allowlist parser and profile schema |
 | Search Analytics date span | 90 inclusive calendar days | Shared calendar range parser through strict schema |

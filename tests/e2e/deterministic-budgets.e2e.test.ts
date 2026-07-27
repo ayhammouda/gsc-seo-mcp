@@ -69,17 +69,24 @@ describe("production deterministic budgets over MCP", () => {
       const active = Array.from({ length: MAX_ACTOR_CONCURRENCY }, () =>
         client.callTool({ name: "gsc_list_sites", arguments: {} })
       );
-      await vi.waitFor(() => expect(serviceCalls).toBe(MAX_ACTOR_CONCURRENCY));
+      // The parked calls hold process-global actor permits. Releasing them inline
+      // would leak those permits to every later test in this file whenever an
+      // assertion above throws, turning one failure into a misleading cascade.
+      try {
+        await vi.waitFor(() => expect(serviceCalls).toBe(MAX_ACTOR_CONCURRENCY));
 
-      const denied = await client.callTool({
-        name: "gsc_list_sites",
-        arguments: {}
-      });
-      expect(denied.isError).toBe(true);
-      expect(serviceCalls).toBe(MAX_ACTOR_CONCURRENCY);
+        const denied = await client.callTool({
+          name: "gsc_list_sites",
+          arguments: {}
+        });
+        expect(denied.isError).toBe(true);
+        expect(serviceCalls).toBe(MAX_ACTOR_CONCURRENCY);
+      } finally {
+        block = false;
+        for (const release of releaseBlockedCalls) release();
+        await Promise.allSettled(active);
+      }
 
-      block = false;
-      for (const release of releaseBlockedCalls) release();
       const completed = await Promise.all(active);
       expect(completed.every((result) => result.isError !== true)).toBe(true);
 
