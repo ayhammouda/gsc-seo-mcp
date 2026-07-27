@@ -42,5 +42,6 @@ Before lifting the freeze, the following must be recorded in successor ADRs:
 - Existing HTTP, mutation, derived-tool, and legacy write-mode users receive a breaking denial.
 - The source checkout and locally produced tarballs are the only supported test surfaces; the similarly named public npm package is not this project.
 - Authentication setup/status may run without a property allowlist; MCP server startup may not.
-- Equivalent-looking property identifiers are distinct unless their exact strings match.
+- Allowlist entries remain exact policy identities; normalized caller aliases resolve only to
+  the configured entry's canonical API value, as specified by the later WP-02 contract.
 - Reintroducing HTTP or writes requires a new reviewed profile, not a rollback of this ADR.

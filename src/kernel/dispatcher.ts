@@ -512,7 +512,7 @@ export function createCapabilityDispatcher(input: CapabilityDispatcherDependenci
             error.code.startsWith("budget_concurrency_")
               ? "concurrency-denied"
               : "reservation-error";
-          if (lease === undefined) await releaseUnvalidatedReservation(reservedLease);
+          await releaseUnvalidatedReservation(reservedLease);
           if (error instanceof BudgetLimitError) throw error;
           throw new KernelDispatchError(
             "budget_reservation_failed",
