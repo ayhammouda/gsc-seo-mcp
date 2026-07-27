@@ -5,32 +5,27 @@
 [![CodeQL](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/codeql.yml/badge.svg)](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-`gsc-seo-mcp` is a TypeScript MCP server that exposes Google Search Console SEO data through local stdio and Streamable HTTP transports.
+`gsc-seo-mcp` is a TypeScript MCP server that exposes a contained, read-only Google Search Console surface over local stdio.
 
-## Install
+> **Release freeze:** npm, MCP Registry, and GitHub Release publishing are technically blocked through WP-10 and until the freeze is explicitly lifted. Creating or pushing a tag is prohibited by policy; a pushed tag only starts a workflow that builds evidence and then fails at the freeze gate. The current runtime surface is intentionally limited to stdio, four direct read tools, and an exact property allowlist.
 
-```bash
-npm install -g gsc-seo-mcp
-```
+## Source-Only Setup
 
-Run without installing:
+Do **not** install or execute the unscoped npm package `gsc-seo-mcp`: that registry name belongs to an unrelated publisher and is not this repository. WP-10/WP-11 must select and verify a collision-free package identity before npm or MCP Registry installation guidance returns.
 
-```bash
-npx gsc-seo-mcp --version
-```
-
-For local development:
+Use the audited source checkout during containment:
 
 ```bash
 npm ci
 npm run build
+node dist/cli.js --version
 ```
 
 ## Authentication
 
 Two authentication modes are supported:
 
-- `stored` (default): `gsc-seo-mcp auth login` manages a local token store using your OAuth client ID and secret.
+- `stored` (default): `node dist/cli.js auth login` manages a local token store using your OAuth client ID and secret.
 - `adc`: use Google Application Default Credentials, such as credentials created by `gcloud auth application-default login`.
 
 ### Stored OAuth Tokens
@@ -45,13 +40,13 @@ export GOOGLE_CLIENT_SECRET="..."
 Login for read-only access:
 
 ```bash
-gsc-seo-mcp auth login
+node dist/cli.js auth login
 ```
 
 Check credential presence without printing secrets:
 
 ```bash
-gsc-seo-mcp auth status
+node dist/cli.js auth status
 ```
 
 ### Application Default Credentials
@@ -62,7 +57,9 @@ ADC mode avoids `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` at server launch t
 gcloud auth application-default login \
   --scopes=https://www.googleapis.com/auth/webmasters.readonly
 
-GSC_SEO_MCP_AUTH_MODE=adc gsc-seo-mcp stdio
+GSC_SEO_MCP_AUTH_MODE=adc \
+GSC_SEO_MCP_ALLOWED_PROPERTIES='["sc-domain:example.com"]' \
+node dist/cli.js stdio
 ```
 
 If `gcloud` requires a custom OAuth client for non-Cloud scopes, create a Desktop OAuth client in Google Cloud and pass its downloaded JSON:
@@ -79,18 +76,23 @@ By default, the server requests only:
 https://www.googleapis.com/auth/webmasters.readonly
 ```
 
-To opt into sitemap submission, run login with readonly disabled:
-
-```bash
-GSC_SEO_MCP_READONLY=false gsc-seo-mcp auth login
-```
+The containment profile does not provide a write-capable login or runtime mode. `operator`, `full_admin`, unknown modes, and the legacy `GSC_SEO_MCP_READONLY=false` setting are rejected.
 
 ## Run
 
-stdio:
+Set an exact, static allowlist before starting the server. Use Search Console property identifiers exactly as Google returns them, including the `sc-domain:` prefix or URL-prefix trailing slash:
 
 ```bash
-gsc-seo-mcp stdio
+export GSC_SEO_MCP_ALLOWED_PROPERTIES='["sc-domain:example.com","https://www.example.com/"]'
+node dist/cli.js stdio
+```
+
+The equivalent repeatable CLI flag is:
+
+```bash
+node dist/cli.js stdio \
+  --allowed-property sc-domain:example.com \
+  --allowed-property https://www.example.com/
 ```
 
 MCP client config:
@@ -100,24 +102,19 @@ MCP client config:
   "mcpServers": {
     "gsc-seo": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "gsc-seo-mcp"],
+      "command": "node",
+      "args": ["/absolute/path/to/gsc-seo-mcp/dist/cli.js", "stdio"],
       "env": {
         "GOOGLE_CLIENT_ID": "...",
-        "GOOGLE_CLIENT_SECRET": "..."
+        "GOOGLE_CLIENT_SECRET": "...",
+        "GSC_SEO_MCP_ALLOWED_PROPERTIES": "[\"sc-domain:example.com\"]"
       }
     }
   }
 }
 ```
 
-Streamable HTTP:
-
-```bash
-gsc-seo-mcp http --host 127.0.0.1 --port 8787 --path /mcp
-```
-
-HTTP mode is intentionally loopback-only for this MVP (`127.0.0.1` or `localhost`) and validates Host and Origin headers to reduce DNS-rebinding risk. Remote binding is rejected until real HTTP authentication is added.
+The CLI does not expose an MCP HTTP command. HTTP transport can only return after an authenticated transport profile and its threat controls are implemented and reviewed.
 
 ## Configuration
 
@@ -129,22 +126,34 @@ Flags override environment variables.
 | `GOOGLE_CLIENT_ID` | OAuth client ID | required for `stored` auth login/live API calls |
 | `GOOGLE_CLIENT_SECRET` | OAuth client secret | required for `stored` auth login/live API calls |
 | `GSC_SEO_MCP_TOKEN_STORE_PATH` | Local credential store path | `~/.gsc-seo-mcp/tokens.json` |
-| `GSC_SEO_MCP_READONLY` | Disable write tools when `true` | `true` |
-| `GSC_SEO_MCP_HTTP_HOST` | HTTP bind host | `127.0.0.1` |
-| `GSC_SEO_MCP_HTTP_PORT` | HTTP bind port | `8787` |
-| `GSC_SEO_MCP_HTTP_PATH` | MCP endpoint path | `/mcp` |
+| `GSC_SEO_MCP_ALLOWED_PROPERTIES` | Required JSON array of exact Search Console properties permitted at server startup | none; startup fails closed |
+| `GSC_SEO_MCP_MODE` | Access mode; containment accepts only `read_only` | `read_only` |
+| `GSC_SEO_MCP_READONLY` | Deprecated compatibility setting; only `true` is accepted | unset |
+
+Authentication commands can run without an allowlist, but MCP server startup cannot. `gsc_list_sites` filters Google results by normalized property identity. Property-bearing calls must resolve to exactly one configured property before a Google API request; when a caller uses a normalization-equivalent alias, the configured property string remains the authoritative value sent upstream.
 
 ## Tools
 
 - `gsc_list_sites`
 - `gsc_search_analytics`
 - `gsc_list_sitemaps`
-- `gsc_submit_sitemap`
 - `gsc_inspect_url`
-- `gsc_find_declining_pages`
-- `gsc_find_keyword_opportunities`
 
-`gsc_submit_sitemap` is annotated as destructive and fails before calling Google when readonly mode is enabled.
+No write or derived-analysis tools are registered. Search Analytics requests are limited to 1,000 rows, a 25,000-row pagination window, four filter groups with eight filters each, and an inclusive 90-day calendar range.
+
+URL-prefix property identifiers must include their trailing slash. Property and target URLs are parsed into immutable semantic values with IDNA host normalization, exact origin/path containment, and ambiguous URL forms rejected before policy.
+
+## Capability Kernel
+
+WP-01 routes every registered tool through one capability dispatcher. Registration and execution read the same dispatcher-bound registry and profile. That frozen, versioned manifest is the source of truth for tool names, MCP metadata, Zod contracts, Google methods and scopes, resource selection, budget and retry classes, and profile visibility.
+
+For each request, the dispatcher creates a frozen local request context, checks the raw invocation budget, strictly parses and semantically normalizes the input, selects a branded resource, applies the property-containment policy, reserves the deterministic local budget, rejects an expired total deadline, accounts for the one allowed Google operation, obtains the lazy read-only service, preflights the raw result, validates and filters it, enforces the final output budget, releases its permit, and attempts one terminal audit event. Unknown and unsupported tool names, invalid input, property denials, and budget denials stop before the service provider or Google client is touched.
+
+The credential-bearing raw service constructor is private. The exported runtime composition function snapshots configuration before installing the lazy credential path, returns a kernel-bound MCP server, and exposes no sitemap mutation method in the packed runtime.
+
+WP-02 installs executable local input, output, and concurrency budgets: 256 KiB invocation/frame limits, 1 MiB structured output, 1,000 primary items, bounded depth/node count, two concurrent calls per actor, four per normalized property, eight per process, a 30-second Google attempt timeout, and a 45-second total read deadline. Exhaustion fails immediately without queuing, and oversized output fails rather than truncates.
+
+The static policy, error, and ephemeral audit adapters remain explicit migration seams. Rate windows, Google quota accounting, retries, fairness, and workflow budgets remain WP-07; the deterministic local budget does not claim those production gates.
 
 ## Development
 
@@ -166,17 +175,32 @@ Quality and release docs:
 - [Manual MCP QA](.github/INTEGRATION-TEST.md)
 - [Release process](.github/RELEASE.md)
 - [Security policy](SECURITY.md)
+- [WP-00 containment decision](docs/adr/0001-wp00-containment-and-release-freeze.md)
+- [WP-00 pinned baseline](docs/remediation/wp-00-baseline.md)
+- [WP-01 capability-kernel decision](docs/adr/0002-capability-kernel.md)
+- [WP-01 migration contract](docs/remediation/wp-01-kernel-migration.md)
+- [WP-01 threat-model delta](docs/remediation/wp-01-threat-model-delta.md)
+- [WP-01 retained evidence](docs/remediation/wp-01-evidence.md)
+- [WP-02 strict-resource and budget decision](docs/adr/0003-strict-resources-and-deterministic-budgets.md)
+- [WP-02 migration contract](docs/remediation/wp-02-resource-budget-migration.md)
+- [WP-02 deterministic budget contract](docs/remediation/wp-02-budget-contract.md)
+- [WP-02 threat-model delta](docs/remediation/wp-02-threat-model-delta.md)
+- [WP-02 retained evidence](docs/remediation/wp-02-evidence.md)
 
 ## Registry Metadata
 
-- `server.json` contains MCP Registry package metadata for npm distribution.
-- `glama.json` contains Glama listing metadata.
-- Version-bearing files are guarded by package tests and the release workflow.
+- `package.json` is private and `server.json` deliberately omits package and remote install descriptors during the release freeze.
+- `glama.json` contains source-project listing metadata only.
+- WP-10/WP-11 must reserve and verify a collision-free package identity before restoring distribution metadata.
+- Version-bearing files and the absence of distribution descriptors are guarded by package tests and the release workflow.
 
 ## Security Notes
 
 - stdio mode never writes logs to stdout.
+- Inbound stdio frames are rejected above 262,144 payload bytes before UTF-8 decoding or JSON parsing.
 - Access tokens, refresh tokens, authorization codes, and client secrets are redacted from logs.
 - The local file token store uses restrictive permissions (`0700` for app-created directories, `0600` for token files).
 - The token store is not encrypted yet; see the `TODO(prod)` marker in `src/auth/token-store.ts`.
-- HTTP mode is loopback-only until remote HTTP authentication is implemented.
+- MCP transport is stdio-only; anonymous HTTP transport is not included in the CLI or packed artifact.
+- Server startup requires a non-empty exact property allowlist and a read-only containment mode.
+- MCP registration contains no direct Google service path; every active call traverses the capability dispatcher.

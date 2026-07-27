@@ -11,16 +11,27 @@ const runLive = process.env.GSC_LIVE_E2E === "true";
 const describeLive = runLive ? describe : describe.skip;
 
 function safeEnv(extra: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(Object.entries({ ...process.env, ...extra }).filter((entry): entry is [string, string] => entry[1] !== undefined));
+  const inherited = Object.entries(process.env).filter(
+    (entry): entry is [string, string] =>
+      entry[1] !== undefined &&
+      entry[0] !== "GSC_SEO_MCP_READONLY" &&
+      entry[0] !== "GSC_SEO_MCP_MODE" &&
+      entry[0] !== "GSC_SEO_MCP_ALLOWED_PROPERTIES"
+  );
+  return { ...Object.fromEntries(inherited), ...extra };
 }
 
-async function withLiveClient<T>(run: (client: Client) => Promise<T>): Promise<T> {
+async function withLiveClient<T>(siteUrl: string, run: (client: Client) => Promise<T>): Promise<T> {
   const tokenStorePath = process.env.GSC_SEO_MCP_TOKEN_STORE_PATH ?? join(await mkdtemp(join(tmpdir(), "gsc-live-e2e-")), "tokens.json");
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: ["dist/cli.js", "stdio"],
     cwd: repoRoot,
-    env: safeEnv({ GSC_SEO_MCP_TOKEN_STORE_PATH: tokenStorePath, GSC_SEO_MCP_READONLY: "true" }),
+    env: safeEnv({
+      GSC_SEO_MCP_TOKEN_STORE_PATH: tokenStorePath,
+      GSC_SEO_MCP_MODE: "read_only",
+      GSC_SEO_MCP_ALLOWED_PROPERTIES: JSON.stringify([siteUrl])
+    }),
     stderr: "pipe"
   });
   const client = new Client({ name: "gsc-live-e2e", version: "0.1.0" });
@@ -40,7 +51,7 @@ describeLive("live Google Search Console MCP E2E", () => {
       throw new Error("GSC_TEST_SITE_URL is required when GSC_LIVE_E2E=true");
     }
 
-    await withLiveClient(async (client) => {
+    await withLiveClient(siteUrl, async (client) => {
       const sites = await client.callTool({ name: "gsc_list_sites", arguments: {} });
       expect(sites.isError).not.toBe(true);
 

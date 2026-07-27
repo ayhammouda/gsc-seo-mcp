@@ -1,0 +1,30 @@
+{
+  "capturedAt": "2026-07-27",
+  "purpose": "Frozen WP-00 completion reference; later work packages do not refresh these observations or turn them into release thresholds.",
+  "auditedBaselineSha": "b01d86d9820cd940f4077d32244c1685e6aeb572",
+  "environment": {
+    "node": "v26.5.0",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "cpu": "Apple M1 Pro"
+  },
+  "measurements": {
+    "fullTestSuite": {
+      "command": "npm test",
+      "testFilesPassed": 15,
+      "testFilesSkipped": 1,
+      "testsPassed": 69,
+      "testsSkipped": 1,
+      "vitestDurationMs": 3790,
+      "observedWallTimeMs": 10460
+    },
+    "packageDryRun": {
+      "command": "npm pack --dry-run --json --ignore-scripts",
+      "entryCount": 44,
+      "packedBytes": 33878,
+      "unpackedBytes": 158511,
+      "sha1": "d3cc34015b14e4abba2ce8e8c9b94ad4e07d9be2",
+      "integrity": "sha512-tYaSGr5+7tmzdMdrKvyqj7BeM4sh8L9EKe7kbF3JZBopFusIBGxNs6P6gy8mBboHwpN3Ib0Zl2v6MAQrECOfAQ=="
+    }
+  }
+}

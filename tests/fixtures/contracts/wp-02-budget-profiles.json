@@ -1,0 +1,55 @@
+{
+  "attemptTimeoutMs": 30000,
+  "totalDeadlineMs": 45000,
+  "concurrency": {
+    "actor": 2,
+    "property": 4,
+    "process": 8
+  },
+  "capabilities": {
+    "gsc_list_sites": {
+      "profileId": "gsc-list-sites-contained",
+      "maxInputBytes": 262144,
+      "maxOutputBytes": 1048576,
+      "primaryOutput": "sites",
+      "maxOutputItems": 1000,
+      "maxOutputDepth": 32,
+      "maxOutputNodes": 50000,
+      "maxGatewayOperations": 1,
+      "concurrencyUnits": 1
+    },
+    "gsc_search_analytics": {
+      "profileId": "gsc-search-analytics-contained",
+      "maxInputBytes": 262144,
+      "maxOutputBytes": 1048576,
+      "primaryOutput": "rows",
+      "maxOutputItems": 1000,
+      "maxOutputDepth": 32,
+      "maxOutputNodes": 50000,
+      "maxGatewayOperations": 1,
+      "concurrencyUnits": 1
+    },
+    "gsc_list_sitemaps": {
+      "profileId": "gsc-list-sitemaps-contained",
+      "maxInputBytes": 262144,
+      "maxOutputBytes": 1048576,
+      "primaryOutput": "sitemaps",
+      "maxOutputItems": 1000,
+      "maxOutputDepth": 32,
+      "maxOutputNodes": 50000,
+      "maxGatewayOperations": 1,
+      "concurrencyUnits": 1
+    },
+    "gsc_inspect_url": {
+      "profileId": "gsc-url-inspection-contained",
+      "maxInputBytes": 262144,
+      "maxOutputBytes": 1048576,
+      "primaryOutput": "singleton",
+      "maxOutputItems": 1,
+      "maxOutputDepth": 32,
+      "maxOutputNodes": 50000,
+      "maxGatewayOperations": 1,
+      "concurrencyUnits": 1
+    }
+  }
+}

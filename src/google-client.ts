@@ -6,7 +6,13 @@ import type {
   SiteEntry,
   SitemapEntry
 } from "./types.js";
-import { searchAnalyticsInputSchema, inspectUrlInputSchema, type SearchAnalyticsInput } from "./schemas.js";
+import type { InspectUrlInput, SearchAnalyticsInput } from "./schemas.js";
+import {
+  BudgetLimitError,
+  MAX_ALLOWLIST_ENTRIES,
+  MAX_ANALYTICS_ROWS_PER_REQUEST,
+  READ_ATTEMPT_TIMEOUT_MS
+} from "./kernel/budget-limits.js";
 
 interface GoogleRequestOptions {
   signal: AbortSignal;
@@ -48,7 +54,6 @@ export interface RawSearchConsoleClient {
         contents?: Array<{ type?: string | null; submitted?: string | number | null; indexed?: string | number | null }>;
       }>;
     }>;
-    submit: GoogleCall<void>;
   };
   urlInspection?: {
     index?: {
@@ -65,15 +70,48 @@ export interface RawSearchConsoleClient {
   };
 }
 
+function assertRawCollectionCardinality(
+  collection: readonly unknown[] | undefined,
+  maximum: number,
+  label: string
+): void {
+  if (collection !== undefined && collection.length > maximum) {
+    throw new BudgetLimitError(
+      "budget_output_items_exceeded",
+      `${label} exceeds the deterministic ${maximum}-item gateway limit`
+    );
+  }
+}
+
 export class GoogleSearchConsoleClient implements GscService {
+  private readonly timeoutMs: number;
+
   constructor(
     private readonly rawClient: RawSearchConsoleClient,
-    private readonly options: { timeoutMs: number }
-  ) {}
+    options: { readonly timeoutMs: number }
+  ) {
+    const timeoutMs = options.timeoutMs;
+    if (
+      !Number.isInteger(timeoutMs) ||
+      timeoutMs < 1 ||
+      timeoutMs > READ_ATTEMPT_TIMEOUT_MS
+    ) {
+      throw new BudgetLimitError(
+        "budget_invalid_configuration",
+        `Google attempt timeout must be an integer from 1 to ${READ_ATTEMPT_TIMEOUT_MS}ms`
+      );
+    }
+    this.timeoutMs = timeoutMs;
+  }
 
   async listSites(signal: AbortSignal): Promise<{ sites: SiteEntry[] }> {
     if (!this.rawClient.sites) throw new Error("Search Console sites client is unavailable");
     const response = await this.rawClient.sites.list({}, this.requestOptions(signal));
+    assertRawCollectionCardinality(
+      response.data.siteEntry,
+      MAX_ALLOWLIST_ENTRIES,
+      "Search Console site inventory"
+    );
     return {
       sites: (response.data.siteEntry ?? [])
         .filter((site) => Boolean(site.siteUrl))
@@ -84,15 +122,22 @@ export class GoogleSearchConsoleClient implements GscService {
     };
   }
 
-  async searchAnalytics(input: unknown, signal: AbortSignal): Promise<SearchAnalyticsOutput> {
+  async searchAnalytics(
+    input: SearchAnalyticsInput,
+    signal: AbortSignal
+  ): Promise<SearchAnalyticsOutput> {
     if (!this.rawClient.searchanalytics) throw new Error("Search Console search analytics client is unavailable");
-    const parsed = searchAnalyticsInputSchema.parse(input);
     const response = await this.rawClient.searchanalytics.query(
       {
-        siteUrl: parsed.site_url,
-        requestBody: toSearchAnalyticsRequest(parsed)
+        siteUrl: input.site_url,
+        requestBody: toSearchAnalyticsRequest(input)
       },
       this.requestOptions(signal)
+    );
+    assertRawCollectionCardinality(
+      response.data.rows,
+      input.row_limit,
+      "Search Analytics response"
     );
     return {
       rows: (response.data.rows ?? []).map(toSearchAnalyticsRow),
@@ -103,6 +148,11 @@ export class GoogleSearchConsoleClient implements GscService {
   async listSitemaps(siteUrl: string, signal: AbortSignal): Promise<{ sitemaps: SitemapEntry[] }> {
     if (!this.rawClient.sitemaps) throw new Error("Search Console sitemaps client is unavailable");
     const response = await this.rawClient.sitemaps.list({ siteUrl }, this.requestOptions(signal));
+    assertRawCollectionCardinality(
+      response.data.sitemap,
+      MAX_ANALYTICS_ROWS_PER_REQUEST,
+      "Search Console sitemap inventory"
+    );
     return {
       sitemaps: (response.data.sitemap ?? [])
         .filter((sitemap) => Boolean(sitemap.path))
@@ -134,21 +184,15 @@ export class GoogleSearchConsoleClient implements GscService {
     };
   }
 
-  async submitSitemap(siteUrl: string, sitemapUrl: string, signal: AbortSignal): Promise<void> {
-    if (!this.rawClient.sitemaps) throw new Error("Search Console sitemaps client is unavailable");
-    await this.rawClient.sitemaps.submit({ siteUrl, feedpath: sitemapUrl }, this.requestOptions(signal));
-  }
-
-  async inspectUrl(input: unknown, signal: AbortSignal): Promise<InspectUrlOutput> {
+  async inspectUrl(input: InspectUrlInput, signal: AbortSignal): Promise<InspectUrlOutput> {
     const inspect = this.rawClient.urlInspection?.index?.inspect;
     if (!inspect) throw new Error("Search Console URL Inspection client is unavailable");
-    const parsed = inspectUrlInputSchema.parse(input);
     const response = await inspect(
       {
         requestBody: {
-          siteUrl: parsed.site_url,
-          inspectionUrl: parsed.inspection_url,
-          languageCode: parsed.language_code
+          siteUrl: input.site_url,
+          inspectionUrl: input.inspection_url,
+          languageCode: input.language_code
         }
       },
       this.requestOptions(signal)
@@ -164,7 +208,7 @@ export class GoogleSearchConsoleClient implements GscService {
   }
 
   private requestOptions(signal: AbortSignal): GoogleRequestOptions {
-    return { signal, timeout: this.options.timeoutMs };
+    return { signal, timeout: this.timeoutMs };
   }
 }
 
@@ -205,4 +249,3 @@ function toSearchAnalyticsRow(row: {
     position: row.position ?? 0
   };
 }
-

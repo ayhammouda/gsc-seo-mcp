@@ -52,5 +52,9 @@ Release workflow details live in [`.github/RELEASE.md`](.github/RELEASE.md).
 - Keep MCP tool inputs and outputs Zod-typed and stable.
 - Do not write logs to stdout from stdio server code.
 - Keep Google API calls behind per-request timeouts and `AbortSignal`.
+- Use the shared branded property, URL, and calendar parsers for authorization facts; do not add handler-local string containment or date parsing.
+- Keep new public and nested input objects strict, and update the reviewed-current schema, manifest, and budget fixtures when a contract changes.
+- Preserve the bounded stdio and deterministic local budget stages when changing transport, dispatcher, gateway, or output behavior.
 - Default OAuth scope to `https://www.googleapis.com/auth/webmasters.readonly`.
-- Keep HTTP transport loopback-only until real remote authentication exists.
+- Do not expose an MCP HTTP command until an authenticated HTTP profile and its threat controls are implemented.
+- Do not add npm or MCP Registry install guidance until a collision-free package identity is verified and the release freeze is explicitly lifted.

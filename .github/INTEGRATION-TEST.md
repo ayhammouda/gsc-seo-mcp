@@ -1,6 +1,8 @@
 # Manual MCP QA Runbook
 
-Use this before releases and after transport, OAuth, or tool-surface changes.
+Use this after transport, OAuth, containment, or tool-surface changes.
+
+> **Release freeze:** this runbook gathers validation evidence but cannot authorize a tag or publication before WP-10 completes and the holistic remediation freeze is explicitly lifted.
 
 ## Prerequisites
 
@@ -12,6 +14,7 @@ Use this before releases and after transport, OAuth, or tool-surface changes.
   - `npm run build`
 - Google Cloud OAuth credentials exist and the Search Console API is enabled.
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set only in your local shell or MCP client environment.
+- At least one real test property is selected for the exact startup allowlist.
 
 ## Test 1: MCP Inspector Over stdio
 
@@ -19,20 +22,19 @@ Start Inspector from the repo root:
 
 ```bash
 npm run build
+export GSC_SEO_MCP_ALLOWED_PROPERTIES='["sc-domain:example.com"]'
 npx @modelcontextprotocol/inspector node dist/cli.js stdio
 ```
 
 Verify:
 
 - [ ] Inspector connects over stdio.
-- [ ] The tool list includes all seven tools:
+- [ ] The tool list contains exactly four tools:
   - `gsc_list_sites`
   - `gsc_search_analytics`
   - `gsc_list_sitemaps`
-  - `gsc_submit_sitemap`
   - `gsc_inspect_url`
-  - `gsc_find_declining_pages`
-  - `gsc_find_keyword_opportunities`
+- [ ] Sitemap submission and derived-analysis tools are absent.
 - [ ] No protocol corruption or unexplained disconnect appears in Inspector.
 - [ ] No non-protocol logs appear on stdout.
 
@@ -73,6 +75,7 @@ For automated live smoke coverage, set a token store from a successful `auth log
 ```bash
 GSC_LIVE_E2E=true \
 GSC_SEO_MCP_TOKEN_STORE_PATH=/path/to/tokens.json \
+GSC_SEO_MCP_ALLOWED_PROPERTIES='["https://example.com/"]' \
 GSC_TEST_SITE_URL=https://example.com/ \
 npm run test:live
 ```
@@ -83,37 +86,50 @@ Call these against a property your account can access:
 - [ ] `gsc_search_analytics`
 - [ ] `gsc_list_sitemaps`
 - [ ] `gsc_inspect_url`
-- [ ] `gsc_find_declining_pages`
-- [ ] `gsc_find_keyword_opportunities`
 
 Expected: calls succeed or return clear Google permission/property errors without leaking tokens.
 
-## Test 4: Write Guard
+Also verify containment:
 
-With default readonly mode:
+- [ ] `gsc_list_sites` returns only properties that normalize to the configured allowlist.
+- [ ] A property-bearing call for a non-allowlisted property is denied before Google is called.
+- [ ] A normalization-equivalent caller alias is authorized only as the configured property identity.
+- [ ] A Search Analytics request for 1,001 rows is rejected.
+- [ ] A Search Analytics request with an inclusive date range longer than 90 calendar days is rejected.
+- [ ] An impossible date, unknown input key, fifth filter group, ninth filter in a group, or pagination window ending after row 25,000 is rejected.
+- [ ] A URL-prefix property without its trailing slash and an inspected URL outside the property are rejected.
+- [ ] Exact-boundary budget tests in `tests/kernel/budgets.test.ts`, `tests/transport.test.ts`, and `tests/e2e/deterministic-budgets.e2e.test.ts` pass.
 
-- [ ] Call `gsc_submit_sitemap`.
-- [ ] Expected: the tool fails before calling Google and explains that readonly mode disables submission.
+## Test 4: Startup And Mode Guards
 
-With explicit write mode:
-
-```bash
-GSC_SEO_MCP_READONLY=false node dist/cli.js auth login
-```
-
-- [ ] Confirm the OAuth consent includes the write scope before testing a real sitemap submission.
-
-## Test 5: Streamable HTTP Loopback
+Verify a missing allowlist fails server startup:
 
 ```bash
-node dist/cli.js http --host 127.0.0.1 --port 8787 --path /mcp
+env -u GSC_SEO_MCP_ALLOWED_PROPERTIES node dist/cli.js stdio
 ```
 
-Verify:
+- [ ] Expected: non-zero exit before a Google client or MCP transport starts.
 
-- [ ] Local MCP HTTP client can connect to `http://127.0.0.1:8787/mcp`.
-- [ ] Spoofed Host or Origin requests are rejected.
-- [ ] Binding to a non-local host remains blocked by configuration validation.
+Verify every unsupported access setting fails:
+
+```bash
+GSC_SEO_MCP_MODE=operator node dist/cli.js auth status
+GSC_SEO_MCP_MODE=full_admin node dist/cli.js auth status
+GSC_SEO_MCP_MODE=unexpected node dist/cli.js auth status
+GSC_SEO_MCP_READONLY=false node dist/cli.js auth status
+```
+
+- [ ] Every command exits non-zero with a containment-specific error.
+- [ ] `GSC_SEO_MCP_READONLY=true` remains accepted only as deprecated read-only compatibility.
+
+## Test 5: HTTP Surface Is Absent
+
+```bash
+node dist/cli.js http
+```
+
+- [ ] Expected: non-zero exit with an unknown-command error.
+- [ ] `gsc-seo-mcp --help` does not advertise HTTP.
 
 ## Test 6: Fresh Package Install
 
@@ -128,6 +144,9 @@ Verify:
 
 - [ ] CLI version matches `package.json`.
 - [ ] No token files, `.env` files, or generated tarballs are included in the package.
+- [ ] Packed CLI help advertises only stdio and authentication commands.
+- [ ] Packed CLI rejects the `http` command.
+- [ ] Packed server exposes exactly the same four read tools when started with a non-empty allowlist.
 
 ## Evidence Log
 
@@ -136,6 +155,6 @@ Verify:
 | Inspector stdio | | | | |
 | OAuth flow | | | | |
 | Read-only tools | | | | |
-| Write guard | | | | |
-| HTTP loopback | | | | |
+| Startup and mode guards | | | | |
+| HTTP surface absent | | | | |
 | Fresh package install | | | | |
