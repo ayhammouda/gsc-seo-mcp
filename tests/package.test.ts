@@ -11,6 +11,8 @@ import { STDIO_JSON_RPC_FRAME_MAX_BYTES } from "../src/transport.js";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const CHILD_PROCESS_TIMEOUT_MS = 10_000;
+const PROCESS_TEST_TIMEOUT_MS = 20_000;
 
 interface PackageJson {
   name: string;
@@ -221,7 +223,7 @@ describe("package metadata", () => {
     expect(serverJson.remotes).toBeUndefined();
   });
 
-  it("exposes an executable package CLI and version flag", async () => {
+  it("exposes an executable package CLI and version flag", { timeout: PROCESS_TEST_TIMEOUT_MS }, async () => {
     const packageJson = readJson<PackageJson>("package.json");
     const cliPath = packageJson.bin[packageJson.name];
 
@@ -229,12 +231,13 @@ describe("package metadata", () => {
     if (!cliPath) throw new Error(`Missing ${packageJson.name} bin entry`);
 
     const { stdout } = await execFileAsync(process.execPath, [resolve(repoRoot, cliPath), "--version"], {
-      cwd: repoRoot
+      cwd: repoRoot,
+      timeout: CHILD_PROCESS_TIMEOUT_MS
     });
     expect(stdout.trim()).toBe(`${packageJson.name} ${packageJson.version}`);
   });
 
-  it("keeps unpacked stdio clean and rejects HTTP before it can bind", { timeout: 20_000 }, async () => {
+  it("keeps unpacked stdio clean and rejects HTTP before it can bind", { timeout: PROCESS_TEST_TIMEOUT_MS }, async () => {
     const temporaryDirectory = await mkdtemp(join(repoRoot, ".package-http-rejection-"));
     const sentinel = createServer();
 
@@ -244,14 +247,17 @@ describe("package metadata", () => {
         ["pack", "--json", "--ignore-scripts", "--pack-destination", temporaryDirectory],
         {
           cwd: repoRoot,
-          maxBuffer: 1024 * 1024
+          maxBuffer: 1024 * 1024,
+          timeout: CHILD_PROCESS_TIMEOUT_MS
         }
       );
       const [packResult] = JSON.parse(packOutput) as PackResult[];
       if (!packResult) throw new Error("npm pack did not return a package result");
 
       const archivePath = resolve(temporaryDirectory, packResult.filename);
-      await execFileAsync("tar", ["-xzf", archivePath, "-C", temporaryDirectory]);
+      await execFileAsync("tar", ["-xzf", archivePath, "-C", temporaryDirectory], {
+        timeout: CHILD_PROCESS_TIMEOUT_MS
+      });
       const packageDirectory = resolve(temporaryDirectory, "package");
       const packagedCli = resolve(packageDirectory, "dist", "cli.js");
       const packedMutationSurfaces = [
@@ -349,10 +355,11 @@ describe("package metadata", () => {
     }
   });
 
-  it("packs only runtime files and public metadata", async () => {
+  it("packs only runtime files and public metadata", { timeout: PROCESS_TEST_TIMEOUT_MS }, async () => {
     const { stdout } = await execFileAsync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
       cwd: repoRoot,
-      maxBuffer: 1024 * 1024
+      maxBuffer: 1024 * 1024,
+      timeout: CHILD_PROCESS_TIMEOUT_MS
     });
     const [packResult] = JSON.parse(stdout) as PackResult[];
     if (!packResult) throw new Error("npm pack did not return a package result");

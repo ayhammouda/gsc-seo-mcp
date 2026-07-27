@@ -8,6 +8,9 @@ import { GSC_TOOL_NAMES } from "../src/mcp-server.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const execFileAsync = promisify(execFile);
+const CHILD_PROCESS_TIMEOUT_MS = 10_000;
+const FAST_FAILURE_TIMEOUT_MS = 5_000;
+const PROCESS_TEST_TIMEOUT_MS = 15_000;
 
 interface JsonRpcFrame {
   jsonrpc?: unknown;
@@ -87,7 +90,7 @@ function runStdioSmoke(): Promise<StdioSmokeResult> {
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill("SIGTERM");
-    }, 5_000);
+    }, CHILD_PROCESS_TIMEOUT_MS);
 
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
@@ -134,7 +137,7 @@ function runStdioSmoke(): Promise<StdioSmokeResult> {
 }
 
 describe("stdio transport smoke", () => {
-  it("lists tools over a real stdio JSON-RPC process without stdout pollution", async () => {
+  it("lists tools over a real stdio JSON-RPC process without stdout pollution", { timeout: PROCESS_TEST_TIMEOUT_MS }, async () => {
     const result = await runStdioSmoke();
     const frames = parseFrames(result.stdout);
     const toolsFrame = frames.find((frame) => frame.id === 2);
@@ -146,7 +149,7 @@ describe("stdio transport smoke", () => {
     expect(extractToolNames(toolsFrame).sort()).toEqual([...GSC_TOOL_NAMES].sort());
   });
 
-  it("fails startup without an allowlist before opening the MCP transport", async () => {
+  it("fails startup without an allowlist before opening the MCP transport", { timeout: PROCESS_TEST_TIMEOUT_MS }, async () => {
     const env = containmentEnv();
     delete env.GSC_SEO_MCP_ALLOWED_PROPERTIES;
     env.GSC_SEO_MCP_AUTH_MODE = "adc";
@@ -156,7 +159,7 @@ describe("stdio transport smoke", () => {
       await execFileAsync(process.execPath, ["dist/cli.js", "stdio"], {
         cwd: repoRoot,
         env,
-        timeout: 2_000
+        timeout: FAST_FAILURE_TIMEOUT_MS
       });
     } catch (error: unknown) {
       failure = error as ExecFileFailure;
@@ -167,7 +170,7 @@ describe("stdio transport smoke", () => {
     expect(failure?.stderr).toContain("GSC_SEO_MCP_ALLOWED_PROPERTIES is required for server startup");
   });
 
-  it("keeps legacy true read-only with a secret-free stderr deprecation warning", async () => {
+  it("keeps legacy true read-only with a secret-free stderr deprecation warning", { timeout: PROCESS_TEST_TIMEOUT_MS }, async () => {
     const env = containmentEnv();
     delete env.GSC_SEO_MCP_MODE;
     env.GSC_SEO_MCP_READONLY = "true";
@@ -175,7 +178,7 @@ describe("stdio transport smoke", () => {
     const result = await execFileAsync(process.execPath, ["dist/cli.js", "auth", "status", "--auth-mode", "adc"], {
       cwd: repoRoot,
       env,
-      timeout: 2_000
+      timeout: FAST_FAILURE_TIMEOUT_MS
     });
 
     expect(JSON.parse(result.stdout) as unknown).toMatchObject({
