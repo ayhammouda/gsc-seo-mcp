@@ -1,0 +1,371 @@
+{
+  "gsc_list_sites": {
+    "input": {
+      "type": "object",
+      "properties": {},
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "sites": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "siteUrl": {
+                "type": "string"
+              },
+              "permissionLevel": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "siteUrl"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "sites"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    }
+  },
+  "gsc_search_analytics": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "site_url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "dimensions": {
+          "default": [],
+          "maxItems": 6,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "query",
+              "page",
+              "country",
+              "device",
+              "date",
+              "searchAppearance"
+            ]
+          }
+        },
+        "row_limit": {
+          "default": 1000,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "start_row": {
+          "default": 0,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 24999
+        },
+        "filters": {
+          "default": [],
+          "maxItems": 4,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "group_type": {
+                "default": "and",
+                "type": "string",
+                "enum": [
+                  "and"
+                ]
+              },
+              "filters": {
+                "minItems": 1,
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "dimension": {
+                      "type": "string",
+                      "enum": [
+                        "query",
+                        "page",
+                        "country",
+                        "device",
+                        "searchAppearance"
+                      ]
+                    },
+                    "operator": {
+                      "default": "equals",
+                      "type": "string",
+                      "enum": [
+                        "contains",
+                        "equals",
+                        "notContains",
+                        "notEquals",
+                        "includingRegex",
+                        "excludingRegex"
+                      ]
+                    },
+                    "expression": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 4096
+                    }
+                  },
+                  "required": [
+                    "dimension",
+                    "expression"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "filters"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "site_url",
+        "start_date",
+        "end_date"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "keys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "clicks": {
+                "type": "number"
+              },
+              "impressions": {
+                "type": "number"
+              },
+              "ctr": {
+                "type": "number"
+              },
+              "position": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "keys",
+              "clicks",
+              "impressions",
+              "ctr",
+              "position"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "rows",
+        "note"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    }
+  },
+  "gsc_list_sitemaps": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "site_url": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "site_url"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "sitemaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "lastSubmitted": {
+                "type": "string"
+              },
+              "lastDownloaded": {
+                "type": "string"
+              },
+              "warnings": {
+                "type": "number"
+              },
+              "errors": {
+                "type": "number"
+              },
+              "isPending": {
+                "type": "boolean"
+              },
+              "isSitemapsIndex": {
+                "type": "boolean"
+              },
+              "type": {
+                "type": "string"
+              },
+              "contents": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "submitted": {
+                      "type": "number"
+                    },
+                    "indexed": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "sitemaps"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    }
+  },
+  "gsc_inspect_url": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "site_url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inspection_url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "language_code": {
+          "default": "en-US",
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 35
+        }
+      },
+      "required": [
+        "site_url",
+        "inspection_url"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "inspectionResultLink": {
+          "type": "string"
+        },
+        "indexStatus": {
+          "type": "object",
+          "properties": {
+            "verdict": {
+              "type": "string"
+            },
+            "coverageState": {
+              "type": "string"
+            },
+            "robotsTxtState": {
+              "type": "string"
+            },
+            "indexingState": {
+              "type": "string"
+            },
+            "pageFetchState": {
+              "type": "string"
+            },
+            "googleCanonical": {
+              "type": "string"
+            },
+            "userCanonical": {
+              "type": "string"
+            },
+            "lastCrawlTime": {
+              "type": "string"
+            },
+            "crawledAs": {
+              "type": "string"
+            },
+            "sitemap": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "referringUrls": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "mobileUsability": {},
+        "richResults": {},
+        "amp": {}
+      },
+      "required": [
+        "indexStatus"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    }
+  }
+}

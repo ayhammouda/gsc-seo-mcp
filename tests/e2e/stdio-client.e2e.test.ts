@@ -11,7 +11,14 @@ import { GSC_TOOL_NAMES } from "../../src/mcp-server.js";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 function safeEnv(extra: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(Object.entries({ ...process.env, ...extra }).filter((entry): entry is [string, string] => entry[1] !== undefined));
+  const inherited = Object.entries(process.env).filter(
+    (entry): entry is [string, string] =>
+      entry[1] !== undefined &&
+      entry[0] !== "GSC_SEO_MCP_READONLY" &&
+      entry[0] !== "GSC_SEO_MCP_MODE" &&
+      entry[0] !== "GSC_SEO_MCP_ALLOWED_PROPERTIES"
+  );
+  return { ...Object.fromEntries(inherited), ...extra };
 }
 
 function isReadable(value: unknown): value is Readable {
@@ -25,7 +32,11 @@ describe("stdio client E2E", () => {
       command: process.execPath,
       args: ["dist/cli.js", "stdio"],
       cwd: repoRoot,
-      env: safeEnv({ GSC_SEO_MCP_TOKEN_STORE_PATH: join(tokenDir, "tokens.json") }),
+      env: safeEnv({
+        GSC_SEO_MCP_TOKEN_STORE_PATH: join(tokenDir, "tokens.json"),
+        GSC_SEO_MCP_MODE: "read_only",
+        GSC_SEO_MCP_ALLOWED_PROPERTIES: '["https://example.com/"]'
+      }),
       stderr: "pipe"
     });
     let stderr = "";

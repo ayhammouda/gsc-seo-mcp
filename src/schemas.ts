@@ -1,4 +1,19 @@
 import * as z from "zod/v4";
+import {
+  MAX_ANALYTICS_ROWS_PER_REQUEST,
+  MAX_ANALYTICS_WINDOW_ROWS,
+  MAX_FILTER_GROUPS,
+  MAX_FILTERS_PER_GROUP,
+  MAX_LANGUAGE_CODE_LENGTH,
+  MAX_PROPERTY_OR_URL_BYTES
+} from "./kernel/budget-limits.js";
+import {
+  parseCalendarDate,
+  parseCalendarDateRange,
+  parseHttpTargetUrl,
+  parseSearchConsoleProperty,
+  isWellFormedBcp47LanguageTag
+} from "./resources/index.js";
 import type { DecliningPage, InspectUrlOutput, KeywordOpportunity } from "./types.js";
 
 export const dimensionSchema = z.enum(["query", "page", "country", "device", "date", "searchAppearance"]);
@@ -11,79 +26,114 @@ export const filterOperatorSchema = z.enum([
   "excludingRegex"
 ]);
 
+const textEncoder = new TextEncoder();
+
+function succeeds(operation: () => unknown): boolean {
+  try {
+    operation();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const isoDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
-  .refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)), "Date must be valid");
+  .refine((value) => succeeds(() => parseCalendarDate(value)), "Date must be a valid calendar day");
 
 const siteUrlSchema = z
   .string()
   .min(1)
-  .refine((value) => value.startsWith("sc-domain:") || z.url().safeParse(value).success, {
-    message: "site_url must be a URL-prefix property URL or sc-domain property"
+  .refine(
+    (value) => textEncoder.encode(value).byteLength <= MAX_PROPERTY_OR_URL_BYTES,
+    `site_url must not exceed ${MAX_PROPERTY_OR_URL_BYTES} UTF-8 bytes`
+  )
+  .refine((value) => succeeds(() => parseSearchConsoleProperty(value)), {
+    message: "site_url must be an exact Search Console URL-prefix or sc-domain property"
+  });
+
+const httpTargetUrlSchema = z
+  .string()
+  .min(1)
+  .refine(
+    (value) => textEncoder.encode(value).byteLength <= MAX_PROPERTY_OR_URL_BYTES,
+    `URL must not exceed ${MAX_PROPERTY_OR_URL_BYTES} UTF-8 bytes`
+  )
+  .refine((value) => succeeds(() => parseHttpTargetUrl(value)), {
+    message: "URL must be an unambiguous absolute HTTP(S) URL without credentials or a fragment"
+  });
+
+const languageCodeSchema = z
+  .string()
+  .min(2)
+  .max(MAX_LANGUAGE_CODE_LENGTH)
+  .refine((value) => isWellFormedBcp47LanguageTag(value), {
+    message: "language_code must be a valid BCP-47 language tag"
   });
 
 const uniqueDimensions = (dimensions: string[]) => new Set(dimensions).size === dimensions.length;
 
-export const emptyInputSchema = z.object({});
+function isCalendarRangeWithin(startDate: string, endDate: string, maxInclusiveDays: number): boolean {
+  return succeeds(() => parseCalendarDateRange(startDate, endDate, { maxInclusiveDays }));
+}
 
-export const dimensionFilterSchema = z.object({
+export const emptyInputSchema = z.strictObject({});
+
+export const dimensionFilterSchema = z.strictObject({
   dimension: dimensionSchema.exclude(["date"]),
   operator: filterOperatorSchema.default("equals"),
   expression: z.string().min(1).max(4096)
 });
 
-export const dimensionFilterGroupSchema = z.object({
+export const dimensionFilterGroupSchema = z.strictObject({
   group_type: z.enum(["and"]).default("and"),
-  filters: z.array(dimensionFilterSchema).min(1)
+  filters: z.array(dimensionFilterSchema).min(1).max(MAX_FILTERS_PER_GROUP)
 });
 
 export const searchAnalyticsInputSchema = z
-  .object({
+  .strictObject({
     site_url: siteUrlSchema,
     start_date: isoDateSchema,
     end_date: isoDateSchema,
-    dimensions: z.array(dimensionSchema).refine(uniqueDimensions, "Dimensions cannot be duplicated").default([]),
-    row_limit: z.int().min(1).max(25_000).default(1000),
-    start_row: z.int().min(0).default(0),
-    filters: z.array(dimensionFilterGroupSchema).default([])
+    dimensions: z
+      .array(dimensionSchema)
+      .max(dimensionSchema.options.length)
+      .refine(uniqueDimensions, "Dimensions cannot be duplicated")
+      .default([]),
+    row_limit: z.int().min(1).max(MAX_ANALYTICS_ROWS_PER_REQUEST).default(MAX_ANALYTICS_ROWS_PER_REQUEST),
+    start_row: z.int().min(0).max(MAX_ANALYTICS_WINDOW_ROWS - 1).default(0),
+    filters: z.array(dimensionFilterGroupSchema).max(MAX_FILTER_GROUPS).default([])
   })
-  .refine((input) => input.start_date <= input.end_date, {
-    message: "start_date must be less than or equal to end_date",
-    path: ["start_date"]
+  .refine((input) => isCalendarRangeWithin(input.start_date, input.end_date, 90), {
+    message: "Search Analytics requires an ordered range of at most 90 inclusive calendar days",
+    path: ["end_date"]
+  })
+  .refine((input) => input.start_row + input.row_limit <= MAX_ANALYTICS_WINDOW_ROWS, {
+    message: `Search Analytics pagination window must not exceed ${MAX_ANALYTICS_WINDOW_ROWS} rows`,
+    path: ["start_row"]
   });
 
-export const listSitemapsInputSchema = z.object({
+export const listSitemapsInputSchema = z.strictObject({
   site_url: siteUrlSchema
 });
 
-export const submitSitemapInputSchema = z.object({
+/**
+ * Property containment is deliberately NOT a schema refinement. The MCP SDK
+ * validates `inputSchema` before it invokes the tool callback, so a rule kept
+ * here would reject cross-property probes outside the capability kernel and
+ * leave no terminal audit event. `selectResource` in the dispatcher owns this
+ * rule instead. Nothing is lost on the wire: refinements are unrepresentable in
+ * JSON Schema, so this rule was never part of the advertised tool contract.
+ */
+export const inspectUrlInputSchema = z.strictObject({
   site_url: siteUrlSchema,
-  sitemap_url: z.url()
+  inspection_url: httpTargetUrlSchema,
+  language_code: languageCodeSchema.default("en-US")
 });
 
-function isInspectionUnderSite(siteUrl: string, inspectionUrl: string): boolean {
-  if (siteUrl.startsWith("sc-domain:")) {
-    const domain = siteUrl.slice("sc-domain:".length).toLowerCase();
-    const hostname = new URL(inspectionUrl).hostname.toLowerCase();
-    return hostname === domain || hostname.endsWith(`.${domain}`);
-  }
-  return inspectionUrl.startsWith(siteUrl);
-}
-
-export const inspectUrlInputSchema = z
-  .object({
-    site_url: siteUrlSchema,
-    inspection_url: z.url(),
-    language_code: z.string().min(2).default("en-US")
-  })
-  .refine((input) => isInspectionUnderSite(input.site_url, input.inspection_url), {
-    message: "inspection_url must be under site_url",
-    path: ["inspection_url"]
-  });
-
 export const findDecliningPagesInputSchema = z
-  .object({
+  .strictObject({
     site_url: siteUrlSchema,
     current_start_date: isoDateSchema,
     current_end_date: isoDateSchema,
@@ -92,25 +142,40 @@ export const findDecliningPagesInputSchema = z
     min_impressions: z.int().min(0).default(100),
     limit: z.int().min(1).max(100).default(25)
   })
-  .refine((input) => input.current_start_date <= input.current_end_date, {
-    message: "current_start_date must be less than or equal to current_end_date",
-    path: ["current_start_date"]
-  })
-  .refine((input) => input.previous_start_date <= input.previous_end_date, {
-    message: "previous_start_date must be less than or equal to previous_end_date",
-    path: ["previous_start_date"]
-  });
+  .refine(
+    (input) => isCalendarRangeWithin(input.current_start_date, input.current_end_date, 90),
+    {
+      message: "current range must be ordered and no longer than 90 inclusive calendar days",
+      path: ["current_end_date"]
+    }
+  )
+  .refine(
+    (input) => isCalendarRangeWithin(input.previous_start_date, input.previous_end_date, 90),
+    {
+      message: "previous range must be ordered and no longer than 90 inclusive calendar days",
+      path: ["previous_end_date"]
+    }
+  );
 
-export const findKeywordOpportunitiesInputSchema = z.object({
-  site_url: siteUrlSchema,
-  start_date: isoDateSchema,
-  end_date: isoDateSchema,
-  min_impressions: z.int().min(0).default(1000),
-  max_ctr: z.number().min(0).max(1).default(0.05),
-  position_min: z.number().min(1).default(4),
-  position_max: z.number().min(1).default(20),
-  limit: z.int().min(1).max(100).default(25)
-});
+export const findKeywordOpportunitiesInputSchema = z
+  .strictObject({
+    site_url: siteUrlSchema,
+    start_date: isoDateSchema,
+    end_date: isoDateSchema,
+    min_impressions: z.int().min(0).default(1000),
+    max_ctr: z.number().min(0).max(1).default(0.05),
+    position_min: z.number().min(1).default(4),
+    position_max: z.number().min(1).default(20),
+    limit: z.int().min(1).max(100).default(25)
+  })
+  .refine((input) => isCalendarRangeWithin(input.start_date, input.end_date, 90), {
+    message: "date range must be ordered and no longer than 90 inclusive calendar days",
+    path: ["end_date"]
+  })
+  .refine((input) => input.position_min <= input.position_max, {
+    message: "position_min must be less than or equal to position_max",
+    path: ["position_max"]
+  });
 
 export const searchRowSchema = z.object({
   keys: z.array(z.string()),
@@ -156,12 +221,6 @@ export const listSitemapsOutputSchema = z.object({
         .optional()
     })
   )
-});
-
-export const submitSitemapOutputSchema = z.object({
-  submitted: z.boolean(),
-  siteUrl: z.string(),
-  sitemapUrl: z.string()
 });
 
 export const inspectUrlOutputSchema: z.ZodType<InspectUrlOutput> = z.object({
@@ -210,17 +269,8 @@ export const keywordOpportunitySchema: z.ZodType<KeywordOpportunity> = z.object(
 export const decliningPagesOutputSchema = z.object({ pages: z.array(decliningPageSchema) });
 export const keywordOpportunitiesOutputSchema = z.object({ opportunities: z.array(keywordOpportunitySchema) });
 
-export const toolSchemaContracts = {
-  gsc_list_sites: { input: emptyInputSchema, output: listSitesOutputSchema },
-  gsc_search_analytics: { input: searchAnalyticsInputSchema, output: searchAnalyticsOutputSchema },
-  gsc_list_sitemaps: { input: listSitemapsInputSchema, output: listSitemapsOutputSchema },
-  gsc_submit_sitemap: { input: submitSitemapInputSchema, output: submitSitemapOutputSchema },
-  gsc_inspect_url: { input: inspectUrlInputSchema, output: inspectUrlOutputSchema },
-  gsc_find_declining_pages: { input: findDecliningPagesInputSchema, output: decliningPagesOutputSchema },
-  gsc_find_keyword_opportunities: { input: findKeywordOpportunitiesInputSchema, output: keywordOpportunitiesOutputSchema }
-} as const;
-
 export type SearchAnalyticsInput = z.infer<typeof searchAnalyticsInputSchema>;
+export type ListSitemapsInput = z.infer<typeof listSitemapsInputSchema>;
 export type InspectUrlInput = z.infer<typeof inspectUrlInputSchema>;
 export type FindDecliningPagesInput = z.infer<typeof findDecliningPagesInputSchema>;
 export type FindKeywordOpportunitiesInput = z.infer<typeof findKeywordOpportunitiesInputSchema>;

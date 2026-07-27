@@ -1,22 +1,20 @@
+import type { InspectUrlInput, SearchAnalyticsInput } from "./schemas.js";
+
 export const READONLY_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 export const WRITE_SCOPE = "https://www.googleapis.com/auth/webmasters";
 
 export type AuthMode = "stored" | "adc";
-
-export interface HttpConfig {
-  host: string;
-  port: number;
-  path: string;
-}
+export type AccessMode = "read_only" | "operator";
 
 export interface AppConfig {
   authMode: AuthMode;
+  mode: AccessMode;
+  allowedProperties: readonly string[];
   googleClientId?: string;
   googleClientSecret?: string;
   tokenStorePath: string;
-  readonly: boolean;
-  http: HttpConfig;
   requestTimeoutMs: number;
+  totalDeadlineMs: number;
 }
 
 export interface SiteEntry {
@@ -100,10 +98,9 @@ export interface KeywordOpportunity {
 
 export interface GscService {
   listSites(signal: AbortSignal): Promise<{ sites: SiteEntry[] }>;
-  searchAnalytics(input: unknown, signal: AbortSignal): Promise<SearchAnalyticsOutput>;
+  searchAnalytics(input: SearchAnalyticsInput, signal: AbortSignal): Promise<SearchAnalyticsOutput>;
   listSitemaps(siteUrl: string, signal: AbortSignal): Promise<{ sitemaps: SitemapEntry[] }>;
-  submitSitemap(siteUrl: string, sitemapUrl: string, signal: AbortSignal): Promise<void>;
-  inspectUrl(input: unknown, signal: AbortSignal): Promise<InspectUrlOutput>;
+  inspectUrl(input: InspectUrlInput, signal: AbortSignal): Promise<InspectUrlOutput>;
 }
 
 export class UserFacingError extends Error {

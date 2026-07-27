@@ -1,0 +1,129 @@
+{
+  "version": "2026-07-27.wp-02",
+  "active": [
+    {
+      "name": "gsc_list_sites",
+      "contractVersion": "0.1.0-read-only.2",
+      "effect": "read",
+      "autonomyClass": "bounded-read",
+      "googleMethod": "webmasters.sites.list",
+      "requiredGoogleScopes": [
+        "https://www.googleapis.com/auth/webmasters.readonly"
+      ],
+      "requiredPropertyRoles": [],
+      "profileModes": [
+        "local-stdio:read_only"
+      ],
+      "resourceScope": {
+        "kind": "account",
+        "filterOutputByAllowedProperties": true
+      },
+      "budgetProfile": "gsc-list-sites-contained",
+      "retryClass": "idempotent-read",
+      "approvalClass": "none",
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "gsc_search_analytics",
+      "contractVersion": "0.1.0-read-only.2",
+      "effect": "read",
+      "autonomyClass": "bounded-read",
+      "googleMethod": "webmasters.searchanalytics.query",
+      "requiredGoogleScopes": [
+        "https://www.googleapis.com/auth/webmasters.readonly"
+      ],
+      "requiredPropertyRoles": [],
+      "profileModes": [
+        "local-stdio:read_only"
+      ],
+      "resourceScope": {
+        "kind": "property",
+        "propertyInputField": "site_url"
+      },
+      "budgetProfile": "gsc-search-analytics-contained",
+      "retryClass": "read-only-post",
+      "approvalClass": "none",
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "gsc_list_sitemaps",
+      "contractVersion": "0.1.0-read-only.2",
+      "effect": "read",
+      "autonomyClass": "bounded-read",
+      "googleMethod": "webmasters.sitemaps.list",
+      "requiredGoogleScopes": [
+        "https://www.googleapis.com/auth/webmasters.readonly"
+      ],
+      "requiredPropertyRoles": [],
+      "profileModes": [
+        "local-stdio:read_only"
+      ],
+      "resourceScope": {
+        "kind": "property",
+        "propertyInputField": "site_url"
+      },
+      "budgetProfile": "gsc-list-sitemaps-contained",
+      "retryClass": "idempotent-read",
+      "approvalClass": "none",
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "gsc_inspect_url",
+      "contractVersion": "0.1.0-read-only.2",
+      "effect": "read",
+      "autonomyClass": "bounded-read",
+      "googleMethod": "searchconsole.urlInspection.index.inspect",
+      "requiredGoogleScopes": [
+        "https://www.googleapis.com/auth/webmasters.readonly"
+      ],
+      "requiredPropertyRoles": [],
+      "profileModes": [
+        "local-stdio:read_only"
+      ],
+      "resourceScope": {
+        "kind": "property-target",
+        "propertyInputField": "site_url",
+        "targetInputField": "inspection_url"
+      },
+      "budgetProfile": "gsc-url-inspection-contained",
+      "retryClass": "read-only-post",
+      "approvalClass": "none",
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
+      }
+    }
+  ],
+  "unsupported": [
+    {
+      "name": "gsc_submit_sitemap",
+      "effect": "mutation",
+      "autonomyClass": "unsupported",
+      "reasonCode": "wp-00-containment",
+      "reconsiderAfter": "WP-09"
+    },
+    {
+      "name": "gsc_find_declining_pages",
+      "effect": "read",
+      "autonomyClass": "unsupported",
+      "reasonCode": "wp-00-containment",
+      "reconsiderAfter": "WP-07"
+    },
+    {
+      "name": "gsc_find_keyword_opportunities",
+      "effect": "read",
+      "autonomyClass": "unsupported",
+      "reasonCode": "wp-00-containment",
+      "reconsiderAfter": "WP-07"
+    }
+  ]
+}

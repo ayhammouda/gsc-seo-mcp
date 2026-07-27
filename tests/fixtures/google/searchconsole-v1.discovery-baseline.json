@@ -1,0 +1,73 @@
+{
+  "snapshot": {
+    "source": "https://searchconsole.googleapis.com/$discovery/rest?version=v1",
+    "retrievedAt": "2026-07-27",
+    "documentFile": "searchconsole-v1.discovery.json",
+    "fileSha256": "8c20bdfa5bc8f6cf19cf11c553073eea08e3e68328589587e921f2beb30d079f",
+    "canonicalDocumentSha256": "ed0a3006f11107f7115a22679c272c999621387d16657ed099b18c45f1f8fecc"
+  },
+  "document": {
+    "id": "searchconsole:v1",
+    "revision": "20260725",
+    "version": "v1",
+    "rootUrl": "https://searchconsole.googleapis.com/",
+    "servicePath": "",
+    "protocol": "rest",
+    "scopes": {
+      "readOnly": "https://www.googleapis.com/auth/webmasters.readonly",
+      "operator": "https://www.googleapis.com/auth/webmasters"
+    },
+    "methods": {
+      "sites.list": {
+        "id": "webmasters.sites.list",
+        "httpMethod": "GET",
+        "path": "webmasters/v3/sites",
+        "scopes": [
+          "https://www.googleapis.com/auth/webmasters",
+          "https://www.googleapis.com/auth/webmasters.readonly"
+        ],
+        "response": "SitesListResponse"
+      },
+      "searchanalytics.query": {
+        "id": "webmasters.searchanalytics.query",
+        "httpMethod": "POST",
+        "path": "webmasters/v3/sites/{siteUrl}/searchAnalytics/query",
+        "scopes": [
+          "https://www.googleapis.com/auth/webmasters",
+          "https://www.googleapis.com/auth/webmasters.readonly"
+        ],
+        "request": "SearchAnalyticsQueryRequest",
+        "response": "SearchAnalyticsQueryResponse"
+      },
+      "sitemaps.list": {
+        "id": "webmasters.sitemaps.list",
+        "httpMethod": "GET",
+        "path": "webmasters/v3/sites/{siteUrl}/sitemaps",
+        "scopes": [
+          "https://www.googleapis.com/auth/webmasters",
+          "https://www.googleapis.com/auth/webmasters.readonly"
+        ],
+        "response": "SitemapsListResponse"
+      },
+      "sitemaps.submit": {
+        "id": "webmasters.sitemaps.submit",
+        "httpMethod": "PUT",
+        "path": "webmasters/v3/sites/{siteUrl}/sitemaps/{feedpath}",
+        "scopes": [
+          "https://www.googleapis.com/auth/webmasters"
+        ]
+      },
+      "urlInspection.index.inspect": {
+        "id": "searchconsole.urlInspection.index.inspect",
+        "httpMethod": "POST",
+        "path": "v1/urlInspection/index:inspect",
+        "scopes": [
+          "https://www.googleapis.com/auth/webmasters",
+          "https://www.googleapis.com/auth/webmasters.readonly"
+        ],
+        "request": "InspectUrlIndexRequest",
+        "response": "InspectUrlIndexResponse"
+      }
+    }
+  }
+}

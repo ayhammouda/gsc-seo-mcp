@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
-import { createGscMcpServer } from "../../src/mcp-server.js";
+import { createContainedGscMcpServer } from "../../src/app/bootstrap.js";
 import type { GscService } from "../../src/types.js";
 
 type ClientCallToolResult = Awaited<ReturnType<Client["callTool"]>>;
@@ -32,7 +32,13 @@ function textContentFrom(result: ClientCallToolResult): string {
 
 async function callTool(service: GscService, name: string, args: Record<string, unknown>): Promise<ClientCallToolResult> {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const server = createGscMcpServer({ service, readonly: true });
+  const server = createContainedGscMcpServer({
+    getService: () => service,
+    mode: "read_only",
+    allowedProperties: ["https://example.com/"],
+    requestTimeoutMs: 30_000,
+    totalDeadlineMs: 45_000
+  });
   const client = new Client({ name: "payload-budget", version: "0.1.0" });
 
   await server.connect(serverTransport);
@@ -58,7 +64,6 @@ describe("model-visible payload budget", () => {
       listSites: () => Promise.resolve({ sites: [] }),
       searchAnalytics: () => Promise.resolve({ rows, note: "Results are sorted by clicks." }),
       listSitemaps: () => Promise.resolve({ sitemaps: [] }),
-      submitSitemap: () => Promise.resolve(),
       inspectUrl: () => Promise.resolve({ indexStatus: {} })
     };
 
@@ -88,7 +93,6 @@ describe("model-visible payload budget", () => {
         ),
       searchAnalytics: () => Promise.resolve({ rows: [], note: "Results are sorted by clicks." }),
       listSitemaps: () => Promise.resolve({ sitemaps: [] }),
-      submitSitemap: () => Promise.resolve(),
       inspectUrl: () => Promise.resolve({ indexStatus: {} })
     };
 

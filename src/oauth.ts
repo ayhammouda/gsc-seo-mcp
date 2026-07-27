@@ -1,20 +1,42 @@
 import { createServer } from "node:http";
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { google } from "googleapis";
+import { createContainedGscMcpServer } from "./app/bootstrap.js";
 import type { AppConfig, GscService } from "./types.js";
-import { READONLY_SCOPE, UserFacingError, WRITE_SCOPE } from "./types.js";
+import { READONLY_SCOPE, UserFacingError } from "./types.js";
 import { requireGoogleOAuthConfig } from "./config.js";
 import { FileTokenStore, type StoredCredentials, type TokenStore } from "./auth/token-store.js";
 import { GoogleSearchConsoleClient, type RawSearchConsoleClient } from "./google-client.js";
 import type { Logger } from "./security.js";
 
-export interface RuntimeService {
+interface RuntimeService {
   service: GscService;
-  hasWriteScope(): Promise<boolean>;
 }
 
-function requestedScopes(readonly: boolean): string[] {
-  return readonly ? [READONLY_SCOPE] : [WRITE_SCOPE];
+function requireReadOnlyContainment(mode: unknown): void {
+  if (mode !== "read_only") {
+    throw new UserFacingError("WP-00 containment supports only GSC_SEO_MCP_MODE=read_only.");
+  }
+}
+
+function requestedScopes(mode: unknown): string[] {
+  requireReadOnlyContainment(mode);
+  return [READONLY_SCOPE];
+}
+
+function snapshotRuntimeConfig(config: AppConfig): AppConfig {
+  requireReadOnlyContainment(config.mode);
+  return Object.freeze({
+    authMode: config.authMode,
+    mode: config.mode,
+    allowedProperties: Object.freeze([...config.allowedProperties]),
+    tokenStorePath: config.tokenStorePath,
+    requestTimeoutMs: config.requestTimeoutMs,
+    totalDeadlineMs: config.totalDeadlineMs,
+    ...(config.googleClientId === undefined ? {} : { googleClientId: config.googleClientId }),
+    ...(config.googleClientSecret === undefined ? {} : { googleClientSecret: config.googleClientSecret })
+  });
 }
 
 function createOAuthClient(config: AppConfig, redirectUri?: string) {
@@ -47,11 +69,13 @@ export function validateOAuthCallback(url: URL, expectedState: string): string {
   return code;
 }
 
-export function createRuntimeService(config: AppConfig, store = new FileTokenStore(config.tokenStorePath), logger?: Logger): RuntimeService {
+function createRuntimeService(config: AppConfig, store?: TokenStore, logger?: Logger): RuntimeService {
+  requireReadOnlyContainment(config.mode);
+  const tokenStore = store ?? new FileTokenStore(config.tokenStorePath);
   let client: GoogleSearchConsoleClient | undefined;
 
   function createAdcClient(): GoogleSearchConsoleClient {
-    const auth = new google.auth.GoogleAuth({ scopes: requestedScopes(config.readonly) });
+    const auth = new google.auth.GoogleAuth({ scopes: requestedScopes(config.mode) });
     return new GoogleSearchConsoleClient(
       google.searchconsole({ version: "v1", auth }) as unknown as RawSearchConsoleClient,
       { timeoutMs: config.requestTimeoutMs }
@@ -59,7 +83,7 @@ export function createRuntimeService(config: AppConfig, store = new FileTokenSto
   }
 
   async function loadStoredCredentials(): Promise<StoredCredentials> {
-    const stored = await store.load();
+    const stored = await tokenStore.load();
     if (!stored) {
       throw new UserFacingError(`No Google credentials found. Run "gsc-seo-mcp auth login" before calling Search Console tools.`);
     }
@@ -81,8 +105,8 @@ export function createRuntimeService(config: AppConfig, store = new FileTokenSto
     oauth.on("tokens", (tokens) => {
       void (async () => {
         try {
-          const current = await store.load();
-          await store.save({
+          const current = await tokenStore.load();
+          await tokenStore.save({
             tokens: { ...(current?.tokens ?? stored.tokens), ...tokens },
             scopes: current?.scopes ?? stored.scopes
           });
@@ -99,31 +123,39 @@ export function createRuntimeService(config: AppConfig, store = new FileTokenSto
   }
 
   return {
-    hasWriteScope: async () => {
-      if (config.authMode === "adc") {
-        return !config.readonly;
-      }
-      const stored = await store.load();
-      return Boolean(stored?.scopes.includes(WRITE_SCOPE));
-    },
     service: {
       listSites: async (signal) => (await getClient()).listSites(signal),
       searchAnalytics: async (input, signal) => (await getClient()).searchAnalytics(input, signal),
       listSitemaps: async (siteUrl, signal) => (await getClient()).listSitemaps(siteUrl, signal),
-      submitSitemap: async (siteUrl, sitemapUrl, signal) => (await getClient()).submitSitemap(siteUrl, sitemapUrl, signal),
       inspectUrl: async (input, signal) => (await getClient()).inspectUrl(input, signal)
     }
   };
 }
 
+export function createRuntimeMcpServer(config: AppConfig, store?: TokenStore, logger?: Logger): McpServer {
+  const runtimeConfig = snapshotRuntimeConfig(config);
+  let runtime: RuntimeService | undefined;
+  return createContainedGscMcpServer({
+    mode: runtimeConfig.mode,
+    allowedProperties: runtimeConfig.allowedProperties,
+    requestTimeoutMs: runtimeConfig.requestTimeoutMs,
+    totalDeadlineMs: runtimeConfig.totalDeadlineMs,
+    getService: () => {
+      runtime ??= createRuntimeService(runtimeConfig, store, logger);
+      return runtime.service;
+    }
+  });
+}
+
 export async function runLocalOAuthLogin(config: AppConfig, store: TokenStore, logger: Logger): Promise<void> {
+  requireReadOnlyContainment(config.mode);
   if (config.authMode === "adc") {
     throw new Error(
       "auth login is not used when GSC_SEO_MCP_AUTH_MODE=adc. Run gcloud auth application-default login with the Search Console scope instead."
     );
   }
   requireGoogleOAuthConfig(config);
-  const scopes = requestedScopes(config.readonly);
+  const scopes = requestedScopes(config.mode);
   const state = randomBytes(32).toString("base64url");
   await new Promise<void>((resolve, reject) => {
     const callbackServer = createServer();

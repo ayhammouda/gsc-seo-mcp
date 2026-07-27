@@ -1,6 +1,7 @@
 {
   "name": "gsc-seo-mcp",
   "version": "0.1.0",
+  "private": true,
   "description": "MCP server exposing Google Search Console SEO data.",
   "type": "module",
   "bin": {
@@ -26,7 +27,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "node --max-old-space-size=4096 ./node_modules/eslint/bin/eslint.js \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "npm run build && vitest run",
-    "test:unit": "vitest run tests/*.test.ts",
+    "test:unit": "vitest run --exclude \"tests/e2e/**\" --exclude \"tests/live/**\"",
     "test:e2e": "npm run build && vitest run tests/e2e",
     "test:live": "npm run build && vitest run tests/live",
     "pack:dry-run": "npm pack --dry-run --json",
