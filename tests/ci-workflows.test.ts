@@ -84,6 +84,17 @@ describe("GitHub workflow coverage", () => {
     expect(dependabot).toContain("package-ecosystem: github-actions");
   });
 
+  it("pins every third-party action to an immutable commit", () => {
+    const workflowDirectory = resolve(repoRoot, ".github/workflows");
+    const actionUses = readdirSync(workflowDirectory)
+      .filter((name) => name.endsWith(".yml") || name.endsWith(".yaml"))
+      .flatMap((name) => readFileSync(resolve(workflowDirectory, name), "utf8").match(/uses:\s*(\S+)/g) ?? [])
+      .map((entry) => entry.replace(/^uses:\s*/, ""));
+
+    expect(actionUses.length).toBeGreaterThan(0);
+    expect(actionUses.filter((action) => !/@[0-9a-f]{40}$/.test(action))).toEqual([]);
+  });
+
   it("retains release evidence while technically freezing every publish path", () => {
     const workflow = readRepoFile(".github/workflows/release.yml");
     const jobsSection = workflow.split(/^jobs:\s*$/m)[1];

@@ -2,7 +2,17 @@
 
 Start here for local setup, validation, and package checks.
 
-## 1. Install tooling
+## 1. Choose an issue
+
+Search the [issue tracker](https://github.com/ayhammouda/gsc-seo-mcp/issues)
+before starting. For substantial changes, open an issue first so the scope and
+security boundaries can be agreed before implementation.
+
+Good first contributions include documentation corrections, additional test
+coverage, and small fixes with a minimal reproduction. Usage questions belong
+in [GitHub Discussions](https://github.com/ayhammouda/gsc-seo-mcp/discussions).
+
+## 2. Install tooling
 
 Use Node.js 22.7.5 or newer, then install dependencies:
 
@@ -10,7 +20,7 @@ Use Node.js 22.7.5 or newer, then install dependencies:
 npm ci
 ```
 
-## 2. Run standard checks
+## 3. Run standard checks
 
 These mirror the fast CI workflow:
 
@@ -24,7 +34,7 @@ npm run pack:dry-run
 
 `npm test` builds `dist/` before running Vitest because the stdio smoke test starts the compiled CLI as a real subprocess.
 
-## 3. Validate MCP behavior
+## 4. Validate MCP behavior
 
 Use this order:
 
@@ -34,7 +44,7 @@ Use this order:
 
 Detailed manual steps live in [`.github/INTEGRATION-TEST.md`](.github/INTEGRATION-TEST.md).
 
-## 4. Package and release checks
+## 5. Package and release checks
 
 For a local package smoke check:
 
@@ -45,6 +55,17 @@ node dist/cli.js --version
 ```
 
 Release workflow details live in [`.github/RELEASE.md`](.github/RELEASE.md).
+
+## 6. Open a pull request
+
+1. Create a focused branch from the latest `main`.
+2. Make one coherent change and add tests where behavior changes.
+3. Run the standard checks above.
+4. Push the branch and open a pull request using the repository template.
+5. Resolve review threads and keep the branch current until required checks pass.
+
+The protected default branch accepts changes through pull requests. Do not
+commit generated `dist/`, local credentials, token stores, or `.env` files.
 
 ## Project conventions
 
