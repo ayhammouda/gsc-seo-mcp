@@ -1,0 +1,24 @@
+name: Documentation improvement
+description: Report unclear, missing, or inaccurate project documentation.
+title: "docs: "
+labels:
+  - documentation
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Documentation location
+      placeholder: README section, file path, or URL
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is unclear or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement
+      description: Include a concrete example or replacement wording when possible.

@@ -1,11 +1,37 @@
 # gsc-seo-mcp
 
+**Secure, read-only Google Search Console access for AI agents, with exact
+property allowlists and a hardened TypeScript MCP runtime.**
+
 [![CI](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/ci.yml)
 [![Security Audit](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/security.yml/badge.svg)](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/security.yml)
 [![CodeQL](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/codeql.yml/badge.svg)](https://github.com/ayhammouda/gsc-seo-mcp/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ayhammouda/gsc-seo-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/ayhammouda/gsc-seo-mcp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node.js 22+](https://img.shields.io/badge/node.js-22%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-ESM-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Google Search Console](https://img.shields.io/badge/Search%20Console-read--only-4285F4?logo=google&logoColor=white)](#security-notes)
 
-`gsc-seo-mcp` is a TypeScript MCP server that exposes a contained, read-only Google Search Console surface over local stdio.
+`gsc-seo-mcp` lets MCP-compatible clients query Google Search Console without
+exposing a broad or write-capable API surface. It currently provides four
+direct read tools over local stdio and fails closed unless an exact Search
+Console property allowlist is configured.
+
+If this project is useful to you, consider
+[starring it on GitHub](https://github.com/ayhammouda/gsc-seo-mcp) and sharing
+the use case you want it to support in
+[Discussions](https://github.com/ayhammouda/gsc-seo-mcp/discussions).
+
+## Why use it
+
+- **Read-only by design:** the default and only contained runtime profile uses
+  Google's `webmasters.readonly` scope.
+- **Exact property containment:** every request is checked against a required,
+  normalization-aware allowlist before Google is called.
+- **Bounded execution:** inputs, outputs, concurrency, and Google request time
+  are capped to reduce accidental or adversarial resource use.
+- **Agent-ready protocol:** Codex, Claude, Cursor, and other MCP clients can use
+  the same Zod-typed tool contracts over stdio.
 
 > **Release freeze:** npm, MCP Registry, and GitHub Release publishing are technically blocked through WP-10 and until the freeze is explicitly lifted. Creating or pushing a tag is prohibited by policy; a pushed tag only starts a workflow that builds evidence and then fails at the freeze gate. The current runtime surface is intentionally limited to stdio, four direct read tools, and an exact property allowlist.
 
@@ -171,6 +197,8 @@ Tests mock Google and network calls.
 Quality and release docs:
 
 - [Contributing](CONTRIBUTING.md)
+- [Support](SUPPORT.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Test strategy](.github/TEST-STRATEGY.md)
 - [Manual MCP QA](.github/INTEGRATION-TEST.md)
 - [Release process](.github/RELEASE.md)
@@ -204,3 +232,15 @@ Quality and release docs:
 - MCP transport is stdio-only; anonymous HTTP transport is not included in the CLI or packed artifact.
 - Server startup requires a non-empty exact property allowlist and a read-only containment mode.
 - MCP registration contains no direct Google service path; every active call that satisfies its advertised tool schema traverses the capability dispatcher. Schema-invalid arguments are rejected by the MCP SDK before the dispatcher is entered and never reach policy, budgets, or credentials.
+
+## Community
+
+- Ask setup and usage questions in
+  [GitHub Discussions](https://github.com/ayhammouda/gsc-seo-mcp/discussions).
+- Report reproducible bugs or propose focused improvements through the
+  [issue templates](https://github.com/ayhammouda/gsc-seo-mcp/issues/new/choose).
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+- Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
+Contributions and real-world feedback are welcome. Please keep proposals within
+the documented read-only containment and release-freeze boundaries.

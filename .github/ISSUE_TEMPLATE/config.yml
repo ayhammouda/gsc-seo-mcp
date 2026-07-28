@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and setup help
+    url: https://github.com/ayhammouda/gsc-seo-mcp/discussions
+    about: Ask the community about setup, MCP clients, and usage.
+  - name: Report a security vulnerability
+    url: https://github.com/ayhammouda/gsc-seo-mcp/security/advisories/new
+    about: Share security-sensitive details privately with the maintainer.

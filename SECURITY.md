@@ -2,11 +2,15 @@
 
 ## Supported Versions
 
-Security fixes target the latest published `0.x` release and `main`.
+During the release freeze, security fixes target `main`. Published versions
+will be listed here after the freeze is explicitly lifted.
 
 ## Reporting a Vulnerability
 
-Use GitHub private vulnerability reporting when available, or open a minimal public issue that asks for a private contact path without including exploit details, tokens, client secrets, authorization codes, or refresh tokens.
+Use
+[GitHub private vulnerability reporting](https://github.com/ayhammouda/gsc-seo-mcp/security/advisories/new).
+Do not open a public issue or discussion with exploit details, tokens, client
+secrets, authorization codes, refresh tokens, or private Search Console data.
 
 ## Security Model
 
