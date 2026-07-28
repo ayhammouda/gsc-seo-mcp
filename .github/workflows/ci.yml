@@ -54,3 +54,37 @@ jobs:
 
       - name: CLI smoke
         run: node dist/cli.js --version
+
+  mcpb:
+    name: MCPB bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24.x"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate MCPB manifest
+        run: npm run mcpb:validate
+
+      - name: Build MCPB bundle
+        run: npm run mcpb:pack
+
+      - name: Verify MCPB checksum
+        working-directory: artifacts
+        run: sha256sum --check *.mcpb.sha256
+
+      - name: Smoke MCPB bundle
+        run: npm run mcpb:smoke
+
+      - name: Inspect MCPB bundle
+        run: node node_modules/@anthropic-ai/mcpb/dist/cli/cli.js info artifacts/gsc-seo-mcp-v0.1.0.mcpb

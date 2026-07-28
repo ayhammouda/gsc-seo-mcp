@@ -58,6 +58,11 @@ describe("GitHub workflow coverage", () => {
     expect(workflow).toContain("npm run test:e2e");
     expect(workflow).toContain("npm run pack:dry-run");
     expect(workflow).toContain("node dist/cli.js --version");
+    expect(workflow).toContain("mcpb:");
+    expect(workflow).toContain("npm run mcpb:validate");
+    expect(workflow).toContain("npm run mcpb:pack");
+    expect(workflow).toContain("npm run mcpb:smoke");
+    expect(workflow).toContain("sha256sum --check *.mcpb.sha256");
   });
 
   it("collects every non-live test file across the two commands CI runs", () => {
@@ -110,7 +115,12 @@ describe("GitHub workflow coverage", () => {
     expect(workflow).toContain("npm run build");
     expect(workflow).toContain("npm run test:unit");
     expect(workflow).toContain("npm pack --json");
+    expect(workflow).toContain("npm run mcpb:pack");
+    expect(workflow).toContain("npm run mcpb:smoke");
+    expect(workflow).toContain("sha256sum --check *.mcpb.sha256");
     expect(workflow).toContain("actions/upload-artifact");
+    expect(workflow).toContain("artifacts/*.mcpb");
+    expect(workflow).toContain("artifacts/*.sha256");
     expect(workflow).toContain("release-freeze:");
     expect(workflow).toContain("Publishing frozen pending WP-10");
     expect(workflow).toContain("exit 1");

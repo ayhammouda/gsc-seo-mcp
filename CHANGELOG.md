@@ -29,6 +29,7 @@ All notable changes to this project are documented here.
 - Added the WP-01 kernel ADR, migration contract, threat-model delta, generated profile/tool truth table, and dispatcher boundary tests.
 - Added the WP-02 resource/budget ADR, migration and threat-model deltas, deterministic budget contract, boundary corpora, and pinned schema/manifest/budget fixtures.
 - GitHub Actions CI, dependency audit, CodeQL, OpenSSF Scorecard, Dependabot, and release workflows.
+- Added an MCPB 0.4 release-candidate manifest, pinned pack/validate tooling, production-only dependency staging, SHA-256 checksums, and an unpacked stdio smoke test.
 - MCP Registry metadata in `server.json` and Glama metadata in `glama.json`.
 - Real stdio subprocess smoke coverage, package metadata checks, workflow checks, and schema contract checks.
 - Contributor, security, release, manual QA, and test strategy documentation.
