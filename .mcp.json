@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "gsc-seo": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${CLAUDE_PROJECT_DIR:-.}/dist/cli.js",
+        "stdio"
+      ],
+      "env": {
+        "GSC_SEO_MCP_ALLOWED_PROPERTIES": "${GSC_SEO_MCP_ALLOWED_PROPERTIES}",
+        "GSC_SEO_MCP_AUTH_MODE": "${GSC_SEO_MCP_AUTH_MODE:-stored}",
+        "GSC_SEO_MCP_MODE": "read_only"
+      }
+    }
+  }
+}

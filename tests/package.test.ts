@@ -23,11 +23,29 @@ interface PackageJson {
 }
 
 interface ServerJson {
+  $schema: string;
   name: string;
   description: string;
+  title: string;
   version: string;
+  websiteUrl: string;
+  repository: {
+    url: string;
+    source: string;
+  };
   packages?: unknown[];
   remotes?: unknown[];
+}
+
+interface ProjectMcpJson {
+  mcpServers: {
+    "gsc-seo": {
+      type: string;
+      command: string;
+      args: string[];
+      env: Record<string, string>;
+    };
+  };
 }
 
 interface PackFile {
@@ -66,6 +84,30 @@ function readJson<T>(path: string): T {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseSinglePackResult(output: string): PackResult {
+  const parsed: unknown = JSON.parse(output);
+  const candidates: unknown[] = Array.isArray(parsed)
+    ? (parsed as unknown[])
+    : isRecord(parsed)
+      ? Object.values(parsed)
+      : [];
+  const candidate = candidates[0];
+
+  if (
+    candidates.length !== 1 ||
+    !isRecord(candidate) ||
+    typeof candidate.filename !== "string" ||
+    !Array.isArray(candidate.files) ||
+    !candidate.files.every(
+      (file) => isRecord(file) && typeof file.path === "string"
+    )
+  ) {
+    throw new Error("npm pack did not return exactly one valid package result");
+  }
+
+  return candidate as unknown as PackResult;
 }
 
 function toolNamesFromResult(result: unknown): string[] {
@@ -213,6 +255,23 @@ describe("package metadata", () => {
     expect(serverJson.version).toBe(packageJson.version);
   });
 
+  it("keeps source registry metadata bound to this repository", () => {
+    const serverJson = readJson<ServerJson>("server.json");
+
+    expect(serverJson.$schema).toBe(
+      "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
+    );
+    expect(serverJson.name).toBe("io.github.ayhammouda/gsc-seo-mcp");
+    expect(serverJson.title).toBe("GSC SEO MCP");
+    expect(serverJson.websiteUrl).toBe(
+      "https://github.com/ayhammouda/gsc-seo-mcp"
+    );
+    expect(serverJson.repository).toEqual({
+      url: "https://github.com/ayhammouda/gsc-seo-mcp",
+      source: "github"
+    });
+  });
+
   it("technically withholds npm and registry distribution during the freeze", () => {
     const packageJson = readJson<PackageJson>("package.json");
     const serverJson = readJson<ServerJson>("server.json");
@@ -221,6 +280,26 @@ describe("package metadata", () => {
     expect(serverJson.description.length).toBeLessThanOrEqual(100);
     expect(serverJson.packages).toBeUndefined();
     expect(serverJson.remotes).toBeUndefined();
+  });
+
+  it("provides a source-only project MCP configuration with fail-closed inputs", () => {
+    const projectMcpJson = readJson<ProjectMcpJson>(".mcp.json");
+
+    expect(projectMcpJson).toEqual({
+      mcpServers: {
+        "gsc-seo": {
+          type: "stdio",
+          command: "node",
+          args: ["${CLAUDE_PROJECT_DIR:-.}/dist/cli.js", "stdio"],
+          env: {
+            GSC_SEO_MCP_ALLOWED_PROPERTIES:
+              "${GSC_SEO_MCP_ALLOWED_PROPERTIES}",
+            GSC_SEO_MCP_AUTH_MODE: "${GSC_SEO_MCP_AUTH_MODE:-stored}",
+            GSC_SEO_MCP_MODE: "read_only"
+          }
+        }
+      }
+    });
   });
 
   it("exposes an executable package CLI and version flag", { timeout: PROCESS_TEST_TIMEOUT_MS }, async () => {
@@ -251,8 +330,7 @@ describe("package metadata", () => {
           timeout: CHILD_PROCESS_TIMEOUT_MS
         }
       );
-      const [packResult] = JSON.parse(packOutput) as PackResult[];
-      if (!packResult) throw new Error("npm pack did not return a package result");
+      const packResult = parseSinglePackResult(packOutput);
 
       const archivePath = resolve(temporaryDirectory, packResult.filename);
       await execFileAsync("tar", ["-xzf", archivePath, "-C", temporaryDirectory], {
@@ -361,8 +439,7 @@ describe("package metadata", () => {
       maxBuffer: 1024 * 1024,
       timeout: CHILD_PROCESS_TIMEOUT_MS
     });
-    const [packResult] = JSON.parse(stdout) as PackResult[];
-    if (!packResult) throw new Error("npm pack did not return a package result");
+    const packResult = parseSinglePackResult(stdout);
     const paths = new Set(packResult.files.map((file) => file.path));
 
     expect(paths.has("dist/cli.js")).toBe(true);
@@ -372,6 +449,7 @@ describe("package metadata", () => {
     expect(paths.has("glama.json")).toBe(true);
     expect(paths.has("SECURITY.md")).toBe(true);
     expect(paths.has("CHANGELOG.md")).toBe(true);
+    expect(paths.has(".mcp.json")).toBe(false);
     expect([...paths].some((path) => path.startsWith("src/"))).toBe(false);
     expect([...paths].some((path) => path.startsWith("tests/"))).toBe(false);
     expect([...paths].some((path) => path.endsWith(".tgz"))).toBe(false);
