@@ -3,7 +3,9 @@ node_modules/
 dist/
 coverage/
 *.tgz
+*.mcpb
+*.sha256
+.mcpb-stage/
 .env
 .env.*
 !.env.example
-

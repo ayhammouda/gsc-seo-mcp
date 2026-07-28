@@ -1,0 +1,81 @@
+{
+  "manifest_version": "0.4",
+  "name": "gsc-seo-mcp",
+  "display_name": "GSC SEO MCP",
+  "version": "0.1.0",
+  "description": "Secure, read-only Google Search Console tools for MCP clients.",
+  "long_description": "Query allowlisted Google Search Console properties through four bounded, read-only tools. The server runs locally over stdio, requests only the webmasters.readonly scope, and fails closed unless an exact property allowlist is configured.",
+  "author": {
+    "name": "ayhammouda",
+    "url": "https://github.com/ayhammouda"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ayhammouda/gsc-seo-mcp"
+  },
+  "homepage": "https://github.com/ayhammouda/gsc-seo-mcp",
+  "documentation": "https://github.com/ayhammouda/gsc-seo-mcp#readme",
+  "support": "https://github.com/ayhammouda/gsc-seo-mcp/issues",
+  "server": {
+    "type": "node",
+    "entry_point": "server/dist/cli.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/dist/cli.js",
+        "stdio"
+      ],
+      "env": {
+        "GSC_SEO_MCP_AUTH_MODE": "adc",
+        "GSC_SEO_MCP_ALLOWED_PROPERTIES": "${user_config.allowed_properties}",
+        "GSC_SEO_MCP_MODE": "read_only"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "gsc_list_sites",
+      "description": "List allowlisted Search Console properties for the authenticated account."
+    },
+    {
+      "name": "gsc_search_analytics",
+      "description": "Query bounded Search Console performance rows for an allowlisted property."
+    },
+    {
+      "name": "gsc_list_sitemaps",
+      "description": "List Search Console sitemaps for an allowlisted property."
+    },
+    {
+      "name": "gsc_inspect_url",
+      "description": "Inspect Google index status for a URL under an allowlisted property."
+    }
+  ],
+  "tools_generated": false,
+  "user_config": {
+    "allowed_properties": {
+      "type": "string",
+      "title": "Allowed Search Console properties",
+      "description": "Required JSON array of exact property identifiers, for example [\"sc-domain:example.com\",\"https://www.example.com/\"].",
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=22.7.5"
+    }
+  },
+  "keywords": [
+    "google-search-console",
+    "seo",
+    "search-analytics",
+    "url-inspection",
+    "sitemaps",
+    "mcp"
+  ],
+  "license": "MIT"
+}
