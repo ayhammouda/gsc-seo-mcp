@@ -33,7 +33,13 @@ the use case you want it to support in
 - **Agent-ready protocol:** Codex, Claude, Cursor, and other MCP clients can use
   the same Zod-typed tool contracts over stdio.
 
-> **Release freeze:** npm, MCP Registry, and GitHub Release publishing are technically blocked through WP-10 and until the freeze is explicitly lifted. Creating or pushing a tag is prohibited by policy; a pushed tag only starts a workflow that builds evidence and then fails at the freeze gate. The current runtime surface is intentionally limited to stdio, four direct read tools, and an exact property allowlist.
+> **Release freeze:** npm, MCP Registry, and GitHub Release publishing are
+> technically blocked through WP-10 and until the freeze is explicitly lifted.
+> An active GitHub ruleset blocks creation, movement, and deletion of `v*`
+> tags; if that rule is deliberately disabled, the tag workflow still builds
+> evidence and fails at the freeze gate. The current runtime surface is
+> intentionally limited to stdio, four direct read tools, and an exact property
+> allowlist.
 
 ## Source-Only Setup
 
@@ -46,6 +52,34 @@ npm ci
 npm run build
 node dist/cli.js --version
 ```
+
+### Project MCP configuration
+
+The repository includes a project-scoped `.mcp.json` for clients that support
+checked-in MCP server configuration. It launches the built source checkout and
+does not use the unrelated npm package:
+
+```json
+{
+  "mcpServers": {
+    "gsc-seo": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${CLAUDE_PROJECT_DIR:-.}/dist/cli.js", "stdio"],
+      "env": {
+        "GSC_SEO_MCP_ALLOWED_PROPERTIES": "${GSC_SEO_MCP_ALLOWED_PROPERTIES}",
+        "GSC_SEO_MCP_AUTH_MODE": "${GSC_SEO_MCP_AUTH_MODE:-stored}",
+        "GSC_SEO_MCP_MODE": "read_only"
+      }
+    }
+  }
+}
+```
+
+Build first, then export `GSC_SEO_MCP_ALLOWED_PROPERTIES` as a JSON array of
+the exact properties this checkout may access. The missing variable has no
+fallback: project configuration must fail closed instead of silently widening
+access.
 
 ## Authentication
 
@@ -218,6 +252,7 @@ Quality and release docs:
 ## Registry Metadata
 
 - `package.json` is private and `server.json` deliberately omits package and remote install descriptors during the release freeze.
+- `.mcp.json` is a source-checkout client configuration, not a registry or npm distribution claim.
 - `glama.json` contains source-project listing metadata only.
 - WP-10/WP-11 must reserve and verify a collision-free package identity before restoring distribution metadata.
 - Version-bearing files and the absence of distribution descriptors are guarded by package tests and the release workflow.

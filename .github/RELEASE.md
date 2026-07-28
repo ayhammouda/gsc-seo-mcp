@@ -6,9 +6,15 @@ Publishing is technically blocked through WP-10 and until the freeze is explicit
 
 - `package.json` is marked `private`;
 - `server.json` has neither a package nor a remote install descriptor;
+- an active `v*` tag ruleset blocks tag creation, movement, and deletion;
+- release immutability is enabled for any future GitHub Release;
 - the tag-triggered release workflow has read-only permissions, no publishing credentials or commands, and an intentional failing freeze job after build/test/pack evidence is produced.
 
-Git and GitHub Actions cannot prevent an authorized maintainer from creating or pushing a tag with this workflow alone. Tags are therefore prohibited by policy while the freeze is active. If one is pushed, the workflow must fail and must not publish to npm, the MCP Registry, or GitHub Releases.
+The tag ruleset has no bypass actor. Lifting the freeze therefore requires an
+explicit repository-settings change as well as the reviewed code and workflow
+changes below. If the ruleset is deliberately disabled and a tag is pushed,
+the workflow must still fail and must not publish to npm, the MCP Registry, or
+GitHub Releases.
 
 Passing WP-00 containment or WP-01 kernel checks is not release authorization.
 
