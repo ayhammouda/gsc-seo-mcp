@@ -58,6 +58,8 @@ try {
   const bundledCli = resolve(unpackDirectory, "server", "dist", "cli.js");
   const child = spawn(process.execPath, [bundledCli, "stdio"], {
     cwd: unpackDirectory,
+    // Deliberately expose only non-sensitive smoke-test values. Inheriting the
+    // parent environment could leak CI or developer credentials to bundled code.
     env: {
       GSC_SEO_MCP_ALLOWED_PROPERTIES: '["sc-domain:example.com"]',
       GSC_SEO_MCP_AUTH_MODE: "adc",
@@ -150,7 +152,9 @@ try {
     }
   });
 
-  if (JSON.stringify(tools) !== JSON.stringify(expectedTools)) {
+  const sortedTools = [...tools].sort();
+  const sortedExpectedTools = [...expectedTools].sort();
+  if (JSON.stringify(sortedTools) !== JSON.stringify(sortedExpectedTools)) {
     throw new Error(`Unexpected MCPB tools: ${JSON.stringify(tools)}`);
   }
   if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");

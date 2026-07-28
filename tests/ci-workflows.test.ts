@@ -63,6 +63,8 @@ describe("GitHub workflow coverage", () => {
     expect(workflow).toContain("npm run mcpb:pack");
     expect(workflow).toContain("npm run mcpb:smoke");
     expect(workflow).toContain("sha256sum --check *.mcpb.sha256");
+    expect(workflow).toContain("require('./package.json').version");
+    expect(workflow).not.toContain("artifacts/gsc-seo-mcp-v0.1.0.mcpb");
   });
 
   it("collects every non-live test file across the two commands CI runs", () => {
@@ -93,13 +95,26 @@ describe("GitHub workflow coverage", () => {
 
   it("pins every third-party action to an immutable commit", () => {
     const workflowDirectory = resolve(repoRoot, ".github/workflows");
-    const actionUses = readdirSync(workflowDirectory)
+    const workflowFiles = readdirSync(workflowDirectory)
       .filter((name) => name.endsWith(".yml") || name.endsWith(".yaml"))
-      .flatMap((name) => readFileSync(resolve(workflowDirectory, name), "utf8").match(/uses:\s*(\S+)/g) ?? [])
+      .map((name) => readFileSync(resolve(workflowDirectory, name), "utf8"));
+    const actionUses = workflowFiles
+      .flatMap((workflow) => workflow.match(/uses:\s*(\S+)/g) ?? [])
       .map((entry) => entry.replace(/^uses:\s*/, ""));
 
     expect(actionUses.length).toBeGreaterThan(0);
     expect(actionUses.filter((action) => !/@[0-9a-f]{40}$/.test(action))).toEqual([]);
+
+    const checkoutSnippets = workflowFiles.flatMap((workflow) => {
+      const lines = workflow.split("\n");
+      return lines.flatMap((line, index) =>
+        line.includes("uses: actions/checkout@") ? [lines.slice(index, index + 4).join("\n")] : []
+      );
+    });
+    expect(checkoutSnippets.length).toBeGreaterThan(0);
+    expect(
+      checkoutSnippets.filter((snippet) => !snippet.includes("persist-credentials: false"))
+    ).toEqual([]);
   });
 
   it("retains release evidence while technically freezing every publish path", () => {

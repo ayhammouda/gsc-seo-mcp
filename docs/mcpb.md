@@ -32,6 +32,15 @@ cd artifacts
 shasum -a 256 -c gsc-seo-mcp-v0.1.0.mcpb.sha256
 ```
 
+On Windows PowerShell:
+
+```powershell
+$checksumLine = (Get-Content gsc-seo-mcp-v0.1.0.mcpb.sha256 -Raw).Trim()
+$expected = ($checksumLine -split '\s+', 2)[0].ToLowerInvariant()
+$actual = (Get-FileHash gsc-seo-mcp-v0.1.0.mcpb -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($actual -ne $expected) { throw "Checksum verification failed" }
+```
+
 The generated files are ignored by Git. Never commit a bundle, checksum,
 credential file, token store, `.env` file, or generated `dist/` directory.
 The smoke command unpacks the bundle into a temporary directory, starts its

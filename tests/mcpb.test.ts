@@ -100,6 +100,15 @@ describe("MCPB distribution candidate", () => {
     );
   });
 
+  it("does not expose the parent environment to bundled smoke-test code", () => {
+    const smokeScript = readFileSync(resolve(repoRoot, "scripts", "smoke-mcpb.mjs"), "utf8");
+
+    expect(smokeScript).toContain('GSC_SEO_MCP_ALLOWED_PROPERTIES: \'["sc-domain:example.com"]\'');
+    expect(smokeScript).toContain('GSC_SEO_MCP_AUTH_MODE: "adc"');
+    expect(smokeScript).toContain('GSC_SEO_MCP_MODE: "read_only"');
+    expect(smokeScript).not.toContain("...process.env");
+  });
+
   it("passes the official MCPB 0.4 schema validator", async () => {
     const cliPath = resolve(
       repoRoot,
