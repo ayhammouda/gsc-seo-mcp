@@ -79,6 +79,8 @@ describe("GitHub workflow coverage", () => {
 
     expect(security).toContain("npm audit --omit=dev");
     expect(codeql).toContain("languages: javascript-typescript");
+    expect(codeql).toContain("permissions: read-all");
+    expect(codeql).toMatch(/analyze:[\s\S]*?permissions:[\s\S]*?security-events: write/);
     expect(scorecard).toContain("ossf/scorecard-action");
     expect(dependabot).toContain("package-ecosystem: npm");
     expect(dependabot).toContain("package-ecosystem: github-actions");
