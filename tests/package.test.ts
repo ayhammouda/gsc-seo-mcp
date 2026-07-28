@@ -110,6 +110,42 @@ function parseSinglePackResult(output: string): PackResult {
   return candidate as unknown as PackResult;
 }
 
+describe("npm pack JSON compatibility", () => {
+  const packResult: PackResult = {
+    filename: "gsc-seo-mcp-0.1.0.tgz",
+    files: [{ path: "dist/cli.js" }]
+  };
+
+  it.each([
+    ["npm 10/11 array", JSON.stringify([packResult])],
+    ["npm 12 keyed object", JSON.stringify({ "gsc-seo-mcp": packResult })]
+  ])("parses one successful %s result", (_label, output) => {
+    expect(parseSinglePackResult(output)).toEqual(packResult);
+  });
+
+  it.each([
+    ["empty object", JSON.stringify({})],
+    [
+      "invalid file entry",
+      JSON.stringify({
+        "gsc-seo-mcp": {
+          filename: "gsc-seo-mcp-0.1.0.tgz",
+          files: [{}]
+        }
+      })
+    ],
+    ["multiple array results", JSON.stringify([packResult, packResult])],
+    [
+      "multiple keyed results",
+      JSON.stringify({ first: packResult, second: packResult })
+    ]
+  ])("rejects %s", (_label, output) => {
+    expect(() => parseSinglePackResult(output)).toThrow(
+      "npm pack did not return exactly one valid package result"
+    );
+  });
+});
+
 function toolNamesFromResult(result: unknown): string[] {
   if (!isRecord(result) || !Array.isArray(result.tools)) return [];
   return result.tools
