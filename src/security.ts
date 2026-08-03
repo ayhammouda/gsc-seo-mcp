@@ -28,26 +28,26 @@ export function redactSecrets(value: unknown): string {
   return redacted;
 }
 
-export function createStderrLogger(): Logger {
-  const write = (level: string, message: string) => {
-    process.stderr.write(`[${level}] ${redactSecrets(message)}\n`);
+function createLogger(write: (entry: string) => void): Logger {
+  const log = (level: string, message: string): void => {
+    write(`[${level}] ${redactSecrets(message)}`);
   };
   return {
-    debug: (message) => write("debug", message),
-    info: (message) => write("info", message),
-    warn: (message) => write("warn", message),
-    error: (message) => write("error", message)
+    debug: (message) => log("debug", message),
+    info: (message) => log("info", message),
+    warn: (message) => log("warn", message),
+    error: (message) => log("error", message)
   };
+}
+
+export function createStderrLogger(): Logger {
+  return createLogger((entry) => process.stderr.write(`${entry}\n`));
 }
 
 export function createMemoryLogger(): Logger & { entries: string[] } {
   const entries: string[] = [];
-  const push = (level: string, message: string) => entries.push(`[${level}] ${redactSecrets(message)}`);
   return {
     entries,
-    debug: (message) => push("debug", message),
-    info: (message) => push("info", message),
-    warn: (message) => push("warn", message),
-    error: (message) => push("error", message)
+    ...createLogger((entry) => entries.push(entry))
   };
 }
