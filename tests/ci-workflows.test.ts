@@ -58,6 +58,13 @@ describe("GitHub workflow coverage", () => {
     expect(workflow).toContain("npm run test:e2e");
     expect(workflow).toContain("npm run pack:dry-run");
     expect(workflow).toContain("node dist/cli.js --version");
+    expect(workflow).toContain("mcpb:");
+    expect(workflow).toContain("npm run mcpb:validate");
+    expect(workflow).toContain("npm run mcpb:pack");
+    expect(workflow).toContain("npm run mcpb:smoke");
+    expect(workflow).toContain("sha256sum --check *.mcpb.sha256");
+    expect(workflow).toContain("require('./package.json').version");
+    expect(workflow).not.toContain("artifacts/gsc-seo-mcp-v0.1.0.mcpb");
   });
 
   it("collects every non-live test file across the two commands CI runs", () => {
@@ -79,9 +86,35 @@ describe("GitHub workflow coverage", () => {
 
     expect(security).toContain("npm audit --omit=dev");
     expect(codeql).toContain("languages: javascript-typescript");
+    expect(codeql).toContain("permissions: read-all");
+    expect(codeql).toMatch(/analyze:[\s\S]*?permissions:[\s\S]*?security-events: write/);
     expect(scorecard).toContain("ossf/scorecard-action");
     expect(dependabot).toContain("package-ecosystem: npm");
     expect(dependabot).toContain("package-ecosystem: github-actions");
+  });
+
+  it("pins every third-party action to an immutable commit", () => {
+    const workflowDirectory = resolve(repoRoot, ".github/workflows");
+    const workflowFiles = readdirSync(workflowDirectory)
+      .filter((name) => name.endsWith(".yml") || name.endsWith(".yaml"))
+      .map((name) => readFileSync(resolve(workflowDirectory, name), "utf8"));
+    const actionUses = workflowFiles
+      .flatMap((workflow) => workflow.match(/uses:\s*(\S+)/g) ?? [])
+      .map((entry) => entry.replace(/^uses:\s*/, ""));
+
+    expect(actionUses.length).toBeGreaterThan(0);
+    expect(actionUses.filter((action) => !/@[0-9a-f]{40}$/.test(action))).toEqual([]);
+
+    const checkoutSnippets = workflowFiles.flatMap((workflow) => {
+      const lines = workflow.split("\n");
+      return lines.flatMap((line, index) =>
+        line.includes("uses: actions/checkout@") ? [lines.slice(index, index + 4).join("\n")] : []
+      );
+    });
+    expect(checkoutSnippets.length).toBeGreaterThan(0);
+    expect(
+      checkoutSnippets.filter((snippet) => !snippet.includes("persist-credentials: false"))
+    ).toEqual([]);
   });
 
   it("retains release evidence while technically freezing every publish path", () => {
@@ -97,7 +130,12 @@ describe("GitHub workflow coverage", () => {
     expect(workflow).toContain("npm run build");
     expect(workflow).toContain("npm run test:unit");
     expect(workflow).toContain("npm pack --json");
+    expect(workflow).toContain("npm run mcpb:pack");
+    expect(workflow).toContain("npm run mcpb:smoke");
+    expect(workflow).toContain("sha256sum --check *.mcpb.sha256");
     expect(workflow).toContain("actions/upload-artifact");
+    expect(workflow).toContain("artifacts/*.mcpb");
+    expect(workflow).toContain("artifacts/*.sha256");
     expect(workflow).toContain("release-freeze:");
     expect(workflow).toContain("Publishing frozen pending WP-10");
     expect(workflow).toContain("exit 1");
