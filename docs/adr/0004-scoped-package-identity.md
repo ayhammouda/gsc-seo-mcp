@@ -9,8 +9,8 @@ ADR 0001 recorded that the unscoped npm name `gsc-seo-mcp` is owned by an unrela
 
 Verified at the time of this decision:
 
-```
-npm view gsc-seo-mcp  ->  version 1.0.1, maintainer samalyx <summerali698@gmail.com>
+```text
+npm view gsc-seo-mcp  ->  version 1.0.1, maintainer samalyx
 ```
 
 The name is genuinely taken by a third party. No release can proceed under it, and advertising it in registry metadata would direct users to unrelated code.

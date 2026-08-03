@@ -44,7 +44,7 @@ the use case you want it to support in
 
 ## Source-Only Setup
 
-Do **not** install or execute the unscoped npm package `gsc-seo-mcp`: that registry name belongs to an unrelated publisher and is not this repository. This project's registry identity is `@ayhammouda/gsc-seo-mcp`, which is reserved but not yet published — the release freeze is still active, so no npm or MCP Registry installation guidance applies yet. The MCP server name and the `gsc-seo-mcp` command are unchanged; only the registry name is scoped.
+Do **not** install or execute the unscoped npm package `gsc-seo-mcp`: that registry name belongs to an unrelated publisher and is not this repository. This project's selected registry identity is `@ayhammouda/gsc-seo-mcp`. That scope is not yet reserved on npm and nothing is published — the release freeze is still active, so no npm or MCP Registry installation guidance applies yet. The MCP server name and the `gsc-seo-mcp` command are unchanged; only the registry name is scoped.
 
 Use the audited source checkout during containment:
 
