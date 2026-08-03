@@ -22,6 +22,7 @@ Do not report vulnerabilities in a public issue or discussion. Follow the
 
 ## Release status
 
-The project is source-only while its release freeze is active. Support does not
-include the unrelated npm package that currently uses the unscoped
-`gsc-seo-mcp` name.
+The project is source-only while its release freeze is active. Its registry
+identity is `@ayhammouda/gsc-seo-mcp`, which is not published yet. Support does
+not include the unrelated npm package that uses the unscoped `gsc-seo-mcp`
+name.

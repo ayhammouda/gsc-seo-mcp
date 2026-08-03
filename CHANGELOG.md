@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Selected `@ayhammouda/gsc-seo-mcp` as the npm registry identity, replacing the unscoped name owned by an unrelated publisher. The MCP protocol server name and the `gsc-seo-mcp` command are unchanged; only the registry name is scoped. See [ADR 0004](docs/adr/0004-scoped-package-identity.md). The release freeze remains active and the scope is not yet reserved on npm.
+
 ### Security
 
 - Added WP-00 containment: stdio-only MCP transport, a mandatory exact property allowlist, read-only mode enforcement, and fail-closed internal write-scope checks.
