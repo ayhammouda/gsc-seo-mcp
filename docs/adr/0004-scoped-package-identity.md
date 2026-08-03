@@ -29,7 +29,9 @@ Only the first collides. Renaming all three because one is contested would chang
 
 ### Scope the npm name only
 
-The registry identity becomes `@ayhammouda/gsc-seo-mcp`. A scope is owned by the npm user or org that holds it, so the collision cannot recur.
+The registry identity becomes `@ayhammouda/gsc-seo-mcp`. Once a scope is held by an npm user or org, only that account can publish under it, so a collision inside the scope becomes impossible.
+
+That protection is conditional on holding the scope, and `@ayhammouda` is not currently reserved. npm scopes map to account names and are first-come, so an unreserved scope is exposed to the same class of problem as the unscoped name it replaces. **Verified npm ownership of `@ayhammouda` is therefore a release precondition, not a follow-up:** the freeze stays in force until the scope is reserved and its owner, repository, workflow, and access level are confirmed.
 
 The MCP protocol server name stays `gsc-seo-mcp`, and the CLI command stays `gsc-seo-mcp`. An npm `bin` key is the command name and is independent of the package name, so a scoped package can expose an unscoped command without conflict. The MCP Registry identity in `server.json` stays `io.github.ayhammouda/gsc-seo-mcp`, which is already namespaced by construction.
 

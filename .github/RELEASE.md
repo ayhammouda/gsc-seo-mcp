@@ -31,7 +31,7 @@ This project's selected registry identity is **`@ayhammouda/gsc-seo-mcp`**. Only
 WP-10/WP-11 progress:
 
 1. ~~select a collision-free package identity~~ — done: `@ayhammouda/gsc-seo-mcp`, selected but not yet owned;
-2. **reserve** the scoped name on npm and verify the npm owner, repository, workflow, and intended public access — outstanding, requires npm account access;
+2. **reserve** the `@ayhammouda` scope on npm and verify the npm owner, repository, workflow, and intended public access — outstanding, requires npm account access. npm scopes map to account names and are first-come, so an unreserved scope offers no protection against the collision it is meant to prevent. This is a release precondition, not a follow-up;
 3. ~~update `package.json`, the lockfile, runtime/version tests, documentation, and `server.json` atomically~~ — done;
 4. restore an exact stdio package argument and the reviewed profile-aware environment metadata — outstanding;
 5. validate the metadata with a checksum-pinned MCP publisher — outstanding;
