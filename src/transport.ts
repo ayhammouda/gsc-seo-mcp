@@ -114,7 +114,6 @@ export class BoundedStdioServerTransport implements Transport {
     await new Promise<void>((resolve, reject) => {
       let settled = false;
       const cleanup = (): void => {
-        this.stdout.off("drain", succeed);
         this.stdout.off("error", fail);
         this.pendingSendCancellations.delete(fail);
       };
@@ -134,11 +133,12 @@ export class BoundedStdioServerTransport implements Transport {
       this.pendingSendCancellations.add(fail);
       this.stdout.once("error", fail);
       try {
-        if (this.stdout.write(serialized)) {
-          succeed();
-        } else {
-          this.stdout.once("drain", succeed);
-        }
+        // write() returning true reports buffer headroom, not delivery; only the
+        // per-chunk callback tells us the frame actually flushed or failed.
+        this.stdout.write(serialized, (error) => {
+          if (error) fail(error);
+          else succeed();
+        });
       } catch (error) {
         fail(
           error instanceof Error

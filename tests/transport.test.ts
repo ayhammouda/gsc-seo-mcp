@@ -242,6 +242,83 @@ describe("BoundedStdioServerTransport lifecycle", () => {
     await expect(harness.transport.send(message)).rejects.toThrow(/closed stdio transport/i);
   });
 
+  it("rejects a send whose write fails after the stream accepted the chunk", async () => {
+    const input = new PassThrough();
+    const output = new Writable({
+      write: (_chunk, _encoding, callback) => {
+        // A pipe torn down mid-write accepts the chunk, then fails its callback.
+        setTimeout(() => callback(new Error("EPIPE: broken pipe")), 0);
+      }
+    });
+    const transport = new BoundedStdioServerTransport(input, output);
+    const streamErrors: Error[] = [];
+    transport.onerror = (error) => streamErrors.push(error);
+    await transport.start();
+
+    await expect(
+      transport.send({ jsonrpc: "2.0", id: 11, result: { ok: true } })
+    ).rejects.toThrow(/EPIPE/);
+
+    // Node destroys the stream after a failed write callback, so the dead
+    // transport is reported to onerror as well as to the rejected send.
+    expect(streamErrors.map((error) => error.message)).toEqual(["EPIPE: broken pipe"]);
+    expect(output.destroyed).toBe(true);
+    await transport.close();
+  });
+
+  it("resolves a backpressured send once the stream flushes the frame", async () => {
+    const input = new PassThrough();
+    const flushes: Array<() => void> = [];
+    const output = new Writable({
+      highWaterMark: 1,
+      write: (_chunk, _encoding, callback) => {
+        flushes.push(() => callback(null));
+      }
+    });
+    const transport = new BoundedStdioServerTransport(input, output);
+    await transport.start();
+
+    let settled = false;
+    const pendingSend = transport
+      .send({ jsonrpc: "2.0", id: 12, result: { padding: "x".repeat(128) } })
+      .then(() => {
+        settled = true;
+      });
+
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    for (const flush of flushes) flush();
+    await pendingSend;
+
+    expect(settled).toBe(true);
+    await transport.close();
+    output.destroy();
+  });
+
+  it("rejects a buffered send when the stream errors before its write callback", async () => {
+    const input = new PassThrough();
+    const output = new Writable({
+      highWaterMark: 1,
+      write: () => {
+        // Never invoke the callback; the stream dies from an unrelated cause.
+      }
+    });
+    const transport = new BoundedStdioServerTransport(input, output);
+    transport.onerror = () => {
+      // Absorb the stream-level report so the failure surfaces via send().
+    };
+    await transport.start();
+    const pendingSend = expect(
+      transport.send({ jsonrpc: "2.0", id: 13, result: { padding: "x".repeat(128) } })
+    ).rejects.toThrow(/socket hang up/);
+
+    await Promise.resolve();
+    output.destroy(new Error("socket hang up"));
+
+    await pendingSend;
+  });
+
   it("rejects a backpressured send when the transport closes", async () => {
     const input = new PassThrough();
     const output = new Writable({
