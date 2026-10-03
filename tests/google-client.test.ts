@@ -146,6 +146,51 @@ describe("GoogleSearchConsoleClient", () => {
     ]);
   });
 
+  it("calls URL Inspection through its resource, which googleapis methods need", async () => {
+    const calls: unknown[] = [];
+    // googleapis resource methods read `this.context`; a detached call throws.
+    const index = {
+      context: {},
+      inspect(this: { context?: object } | undefined, params: unknown, options: unknown) {
+        if (this?.context === undefined) {
+          throw new TypeError("Cannot read properties of undefined (reading 'context')");
+        }
+        calls.push({ params, options });
+        return Promise.resolve({
+          data: { inspectionResult: { indexStatusResult: { verdict: "PASS" } } }
+        });
+      }
+    };
+    const client = new GoogleSearchConsoleClient(
+      { urlInspection: { index } },
+      { timeoutMs: 1234 }
+    );
+    const signal = new AbortController().signal;
+
+    const output = await client.inspectUrl(
+      {
+        site_url: "https://example.com/",
+        inspection_url: "https://example.com/page",
+        language_code: "en-US"
+      },
+      signal
+    );
+
+    expect(output).toEqual({ indexStatus: { verdict: "PASS" } });
+    expect(calls).toEqual([
+      {
+        params: {
+          requestBody: {
+            siteUrl: "https://example.com/",
+            inspectionUrl: "https://example.com/page",
+            languageCode: "en-US"
+          }
+        },
+        options: { signal, timeout: 1234 }
+      }
+    ]);
+  });
+
   it("rejects an oversized sitemap inventory before mapping it", async () => {
     const sitemaps = Array.from(
       { length: MAX_ANALYTICS_ROWS_PER_REQUEST + 1 },
