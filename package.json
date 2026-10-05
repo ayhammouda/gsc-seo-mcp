@@ -1,5 +1,5 @@
 {
-  "name": "gsc-seo-mcp",
+  "name": "@ayhammouda/gsc-seo-mcp",
   "version": "0.1.0",
   "private": true,
   "description": "MCP server exposing Google Search Console SEO data.",

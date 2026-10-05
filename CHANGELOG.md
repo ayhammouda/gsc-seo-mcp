@@ -16,6 +16,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Selected `@ayhammouda/gsc-seo-mcp` as the npm registry identity, replacing the unscoped name owned by an unrelated publisher. The MCP protocol server name and the `gsc-seo-mcp` command are unchanged; only the registry name is scoped. See [ADR 0004](docs/adr/0004-scoped-package-identity.md). The release freeze remains active and the scope is not yet reserved on npm.
 - Reduced the public MCP surface to four direct read tools: site inventory, Search Analytics, sitemap listing, and URL inspection.
 - Deprecated `GSC_SEO_MCP_READONLY=true`; write-enabling legacy settings and unsupported access modes are now rejected.
 - Replaced literal tool registration, handler-local authorization, and the separate schema-contract map with a frozen versioned manifest and one dispatcher.

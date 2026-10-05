@@ -22,18 +22,22 @@ The checked-in MCPB manifest and locally generated `.mcpb` file are release-cand
 
 Passing WP-00 containment or WP-01 kernel checks is not release authorization.
 
-## Package Identity Blocker
+## Package Identity
 
 The unscoped npm name `gsc-seo-mcp` belongs to an unrelated publisher. Do not install it, execute it with `npx`, configure trusted publishing for it, or advertise it in MCP Registry metadata.
 
-WP-10/WP-11 must:
+This project's selected registry identity is **`@ayhammouda/gsc-seo-mcp`**. Only the npm name is scoped: the MCP protocol server name and the `gsc-seo-mcp` CLI command deliberately stay unscoped, and `tests/package.test.ts` asserts all three separately so they cannot silently collapse back into one string.
 
-1. select and reserve a collision-free package identity owned by this project;
-2. verify the npm owner, repository, workflow, and intended public access;
-3. update `package.json`, the lockfile, runtime/version tests, documentation, and `server.json` atomically;
-4. restore an exact stdio package argument and the reviewed profile-aware environment metadata;
-5. validate the metadata with a checksum-pinned MCP publisher;
-6. replace the freeze workflow with the reviewed digest-continuous release workflow.
+WP-10/WP-11 progress:
+
+1. ~~select a collision-free package identity~~ — done: `@ayhammouda/gsc-seo-mcp`, selected but not yet owned;
+2. **reserve** the `@ayhammouda` scope on npm and verify the npm owner, repository, workflow, and intended public access — outstanding, requires npm account access. npm scopes map to account names and are first-come, so an unreserved scope offers no protection against the collision it is meant to prevent. This is a release precondition, not a follow-up;
+3. ~~update `package.json`, the lockfile, runtime/version tests, documentation, and `server.json` atomically~~ — done;
+4. restore an exact stdio package argument and the reviewed profile-aware environment metadata — outstanding;
+5. validate the metadata with a checksum-pinned MCP publisher — outstanding;
+6. replace the freeze workflow with the reviewed digest-continuous release workflow — outstanding.
+
+Selecting the identity does not lift the freeze. `package.json` stays `private`, `server.json` still advertises no packages or remotes, and the tag ruleset and freeze job are unchanged.
 
 ## Allowed Freeze Evidence
 
