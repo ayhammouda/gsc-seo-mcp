@@ -41,6 +41,10 @@ All notable changes to this project are documented here.
 - Removed public sitemap submission and derived-analysis tools during containment.
 - Removed the mutation method from the packed runtime service and Google client and removed the exported direct-handler execution path.
 
+### Fixed
+
+- `gsc_inspect_url` no longer fails with "Cannot read properties of undefined (reading 'context')": the URL Inspection method is called through its googleapis resource, like the other three tools, instead of through a detached reference.
+
 ## [0.1.0] - 2026-07-01
 
 ### Added

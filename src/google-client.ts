@@ -215,9 +215,11 @@ export class GoogleSearchConsoleClient implements GscService {
   }
 
   async inspectUrl(input: InspectUrlInput, signal: AbortSignal): Promise<InspectUrlOutput> {
-    const inspect = this.rawClient.urlInspection?.index?.inspect;
-    if (!inspect) throw new Error("Search Console URL Inspection client is unavailable");
-    const response = await inspect(
+    const index = this.rawClient.urlInspection?.index;
+    if (!index?.inspect) throw new Error("Search Console URL Inspection client is unavailable");
+    // Call through `index`: googleapis methods read `this.context`, so a
+    // detached reference throws "Cannot read properties of undefined".
+    const response = await index.inspect(
       {
         requestBody: {
           siteUrl: input.site_url,
