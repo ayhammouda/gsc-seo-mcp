@@ -44,7 +44,7 @@ the use case you want it to support in
 
 ## Source-Only Setup
 
-Do **not** install or execute the unscoped npm package `gsc-seo-mcp`: that registry name belongs to an unrelated publisher and is not this repository. WP-10/WP-11 must select and verify a collision-free package identity before npm or MCP Registry installation guidance returns.
+Do **not** install or execute the unscoped npm package `gsc-seo-mcp`: that registry name belongs to an unrelated publisher and is not this repository. This project's selected registry identity is `@ayhammouda/gsc-seo-mcp`. That scope is not yet reserved on npm and nothing is published — the release freeze is still active, so no npm or MCP Registry installation guidance applies yet. The MCP server name and the `gsc-seo-mcp` command are unchanged; only the registry name is scoped.
 
 Use the audited source checkout during containment:
 
@@ -269,9 +269,11 @@ Quality and release docs:
 - [WP-02 deterministic budget contract](docs/remediation/wp-02-budget-contract.md)
 - [WP-02 threat-model delta](docs/remediation/wp-02-threat-model-delta.md)
 - [WP-02 retained evidence](docs/remediation/wp-02-evidence.md)
+- [WP-10 scoped package identity decision](docs/adr/0004-scoped-package-identity.md)
 
 ## Registry Metadata
 
+- The npm identity is `@ayhammouda/gsc-seo-mcp`; the MCP server name and the `gsc-seo-mcp` command are deliberately unscoped. See [ADR 0004](docs/adr/0004-scoped-package-identity.md).
 - `package.json` is private and `server.json` deliberately omits package and remote install descriptors during the release freeze.
 - `.mcp.json` is a source-checkout client configuration, not a registry or npm distribution claim.
 - `glama.json` contains source-project listing metadata only.

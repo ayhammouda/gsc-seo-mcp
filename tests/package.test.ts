@@ -112,13 +112,13 @@ function parseSinglePackResult(output: string): PackResult {
 
 describe("npm pack JSON compatibility", () => {
   const packResult: PackResult = {
-    filename: "gsc-seo-mcp-0.1.0.tgz",
+    filename: "ayhammouda-gsc-seo-mcp-0.1.0.tgz",
     files: [{ path: "dist/cli.js" }]
   };
 
   it.each([
     ["npm 10/11 array", JSON.stringify([packResult])],
-    ["npm 12 keyed object", JSON.stringify({ "gsc-seo-mcp": packResult })]
+    ["npm 12 keyed object", JSON.stringify({ "@ayhammouda/gsc-seo-mcp": packResult })]
   ])("parses one successful %s result", (_label, output) => {
     expect(parseSinglePackResult(output)).toEqual(packResult);
   });
@@ -128,8 +128,8 @@ describe("npm pack JSON compatibility", () => {
     [
       "invalid file entry",
       JSON.stringify({
-        "gsc-seo-mcp": {
-          filename: "gsc-seo-mcp-0.1.0.tgz",
+        "@ayhammouda/gsc-seo-mcp": {
+          filename: "ayhammouda-gsc-seo-mcp-0.1.0.tgz",
           files: [{}]
         }
       })
@@ -286,9 +286,28 @@ describe("package metadata", () => {
     const packageJson = readJson<PackageJson>("package.json");
     const serverJson = readJson<ServerJson>("server.json");
 
-    expect(GSC_SERVER_NAME).toBe(packageJson.name);
     expect(GSC_SERVER_VERSION).toBe(packageJson.version);
     expect(serverJson.version).toBe(packageJson.version);
+  });
+
+  // WP-10 identity: the unscoped npm name `gsc-seo-mcp` belongs to an unrelated
+  // publisher, so the registry name is deliberately scoped. The MCP protocol
+  // name and the CLI command are separate identities and stay unscoped; these
+  // assertions keep the three from silently collapsing back into one string.
+  it("publishes under a scoped npm name that cannot collide with the unrelated publisher", () => {
+    const packageJson = readJson<PackageJson>("package.json");
+
+    expect(packageJson.name).toBe("@ayhammouda/gsc-seo-mcp");
+  });
+
+  it("advertises the unscoped server name to MCP clients", () => {
+    expect(GSC_SERVER_NAME).toBe("gsc-seo-mcp");
+  });
+
+  it("exposes an unscoped CLI command independent of the npm name", () => {
+    const packageJson = readJson<PackageJson>("package.json");
+
+    expect(packageJson.bin).toEqual({ "gsc-seo-mcp": "./dist/cli.js" });
   });
 
   it("keeps source registry metadata bound to this repository", () => {
@@ -340,16 +359,16 @@ describe("package metadata", () => {
 
   it("exposes an executable package CLI and version flag", { timeout: PROCESS_TEST_TIMEOUT_MS }, async () => {
     const packageJson = readJson<PackageJson>("package.json");
-    const cliPath = packageJson.bin[packageJson.name];
+    const cliPath = packageJson.bin[GSC_SERVER_NAME];
 
     expect(cliPath).toBe("./dist/cli.js");
-    if (!cliPath) throw new Error(`Missing ${packageJson.name} bin entry`);
+    if (!cliPath) throw new Error(`Missing ${GSC_SERVER_NAME} bin entry`);
 
     const { stdout } = await execFileAsync(process.execPath, [resolve(repoRoot, cliPath), "--version"], {
       cwd: repoRoot,
       timeout: CHILD_PROCESS_TIMEOUT_MS
     });
-    expect(stdout.trim()).toBe(`${packageJson.name} ${packageJson.version}`);
+    expect(stdout.trim()).toBe(`${GSC_SERVER_NAME} ${packageJson.version}`);
   });
 
   it("keeps unpacked stdio clean and rejects HTTP before it can bind", { timeout: PROCESS_TEST_TIMEOUT_MS }, async () => {
